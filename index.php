@@ -1,3 +1,14 @@
+<?php   
+  include_once('./db/dbconf.php');
+  include_once('./class/class.slide.php');
+  include_once('./class/class.course.php');
+
+
+  // Create Object
+    $objSlide=new slide($DB_con);
+    $objCourse=new Course($DB_con);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

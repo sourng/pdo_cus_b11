@@ -921,7 +921,7 @@ class cslide_list extends cslide {
 			return FALSE;
 		if ($objForm->HasValue("x_description") && $objForm->HasValue("o_description") && $this->description->CurrentValue <> $this->description->OldValue)
 			return FALSE;
-		if ($objForm->HasValue("x_img") && $objForm->HasValue("o_img") && $this->img->CurrentValue <> $this->img->OldValue)
+		if (!ew_Empty($this->img->Upload->Value))
 			return FALSE;
 		if ($objForm->HasValue("x_status") && $objForm->HasValue("o_status") && $this->status->CurrentValue <> $this->status->OldValue)
 			return FALSE;
@@ -1758,6 +1758,16 @@ class cslide_list extends cslide {
 		}
 	}
 
+	// Get upload files
+	function GetUploadFiles() {
+		global $objForm, $Language;
+
+		// Get upload data
+		$this->img->Upload->Index = $objForm->Index;
+		$this->img->Upload->UploadFile();
+		$this->img->CurrentValue = $this->img->Upload->FileName;
+	}
+
 	// Load default values
 	function LoadDefaultValues() {
 		$this->slide_id->CurrentValue = NULL;
@@ -1766,8 +1776,8 @@ class cslide_list extends cslide {
 		$this->title->OldValue = $this->title->CurrentValue;
 		$this->description->CurrentValue = NULL;
 		$this->description->OldValue = $this->description->CurrentValue;
-		$this->img->CurrentValue = NULL;
-		$this->img->OldValue = $this->img->CurrentValue;
+		$this->img->Upload->DbValue = NULL;
+		$this->img->OldValue = $this->img->Upload->DbValue;
 		$this->status->CurrentValue = NULL;
 		$this->status->OldValue = $this->status->CurrentValue;
 		$this->url->CurrentValue = NULL;
@@ -1786,6 +1796,7 @@ class cslide_list extends cslide {
 
 		// Load from form
 		global $objForm;
+		$this->GetUploadFiles(); // Get upload files
 		if (!$this->slide_id->FldIsDetailKey && $this->CurrentAction <> "gridadd" && $this->CurrentAction <> "add")
 			$this->slide_id->setFormValue($objForm->GetValue("x_slide_id"));
 		if (!$this->title->FldIsDetailKey) {
@@ -1793,9 +1804,6 @@ class cslide_list extends cslide {
 		}
 		if (!$this->description->FldIsDetailKey) {
 			$this->description->setFormValue($objForm->GetValue("x_description"));
-		}
-		if (!$this->img->FldIsDetailKey) {
-			$this->img->setFormValue($objForm->GetValue("x_img"));
 		}
 		if (!$this->status->FldIsDetailKey) {
 			$this->status->setFormValue($objForm->GetValue("x_status"));
@@ -1812,7 +1820,6 @@ class cslide_list extends cslide {
 			$this->slide_id->CurrentValue = $this->slide_id->FormValue;
 		$this->title->CurrentValue = $this->title->FormValue;
 		$this->description->CurrentValue = $this->description->FormValue;
-		$this->img->CurrentValue = $this->img->FormValue;
 		$this->status->CurrentValue = $this->status->FormValue;
 		$this->url->CurrentValue = $this->url->FormValue;
 	}
@@ -1879,7 +1886,8 @@ class cslide_list extends cslide {
 		$this->slide_id->setDbValue($row['slide_id']);
 		$this->title->setDbValue($row['title']);
 		$this->description->setDbValue($row['description']);
-		$this->img->setDbValue($row['img']);
+		$this->img->Upload->DbValue = $row['img'];
+		$this->img->setDbValue($this->img->Upload->DbValue);
 		$this->status->setDbValue($row['status']);
 		$this->url->setDbValue($row['url']);
 	}
@@ -1891,7 +1899,7 @@ class cslide_list extends cslide {
 		$row['slide_id'] = $this->slide_id->CurrentValue;
 		$row['title'] = $this->title->CurrentValue;
 		$row['description'] = $this->description->CurrentValue;
-		$row['img'] = $this->img->CurrentValue;
+		$row['img'] = $this->img->Upload->DbValue;
 		$row['status'] = $this->status->CurrentValue;
 		$row['url'] = $this->url->CurrentValue;
 		return $row;
@@ -1905,7 +1913,7 @@ class cslide_list extends cslide {
 		$this->slide_id->DbValue = $row['slide_id'];
 		$this->title->DbValue = $row['title'];
 		$this->description->DbValue = $row['description'];
-		$this->img->DbValue = $row['img'];
+		$this->img->Upload->DbValue = $row['img'];
 		$this->status->DbValue = $row['status'];
 		$this->url->DbValue = $row['url'];
 	}
@@ -1970,7 +1978,15 @@ class cslide_list extends cslide {
 		$this->description->ViewCustomAttributes = "";
 
 		// img
-		$this->img->ViewValue = $this->img->CurrentValue;
+		$this->img->UploadPath = "../uploads/slide";
+		if (!ew_Empty($this->img->Upload->DbValue)) {
+			$this->img->ImageWidth = 0;
+			$this->img->ImageHeight = 94;
+			$this->img->ImageAlt = $this->img->FldAlt();
+			$this->img->ViewValue = $this->img->Upload->DbValue;
+		} else {
+			$this->img->ViewValue = "";
+		}
 		$this->img->ViewCustomAttributes = "";
 
 		// status
@@ -1998,8 +2014,22 @@ class cslide_list extends cslide {
 
 			// img
 			$this->img->LinkCustomAttributes = "";
-			$this->img->HrefValue = "";
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->HrefValue = ew_GetFileUploadUrl($this->img, $this->img->Upload->DbValue); // Add prefix/suffix
+				$this->img->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->img->HrefValue = ew_FullUrl($this->img->HrefValue, "href");
+			} else {
+				$this->img->HrefValue = "";
+			}
+			$this->img->HrefValue2 = $this->img->UploadPath . $this->img->Upload->DbValue;
 			$this->img->TooltipValue = "";
+			if ($this->img->UseColorbox) {
+				if (ew_Empty($this->img->TooltipValue))
+					$this->img->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+				$this->img->LinkAttrs["data-rel"] = "slide_x" . $this->RowCnt . "_img";
+				ew_AppendClass($this->img->LinkAttrs["class"], "ewLightbox");
+			}
 
 			// status
 			$this->status->LinkCustomAttributes = "";
@@ -2029,8 +2059,21 @@ class cslide_list extends cslide {
 			// img
 			$this->img->EditAttrs["class"] = "form-control";
 			$this->img->EditCustomAttributes = "";
-			$this->img->EditValue = ew_HtmlEncode($this->img->CurrentValue);
-			$this->img->PlaceHolder = ew_RemoveHtml($this->img->FldCaption());
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->ImageWidth = 0;
+				$this->img->ImageHeight = 94;
+				$this->img->ImageAlt = $this->img->FldAlt();
+				$this->img->EditValue = $this->img->Upload->DbValue;
+			} else {
+				$this->img->EditValue = "";
+			}
+			if (!ew_Empty($this->img->CurrentValue))
+					if ($this->RowIndex == '$rowindex$')
+						$this->img->Upload->FileName = "";
+					else
+						$this->img->Upload->FileName = $this->img->CurrentValue;
+			if (is_numeric($this->RowIndex) && !$this->EventCancelled) ew_RenderUploadField($this->img, $this->RowIndex);
 
 			// status
 			$this->status->EditAttrs["class"] = "form-control";
@@ -2060,7 +2103,15 @@ class cslide_list extends cslide {
 
 			// img
 			$this->img->LinkCustomAttributes = "";
-			$this->img->HrefValue = "";
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->HrefValue = ew_GetFileUploadUrl($this->img, $this->img->Upload->DbValue); // Add prefix/suffix
+				$this->img->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->img->HrefValue = ew_FullUrl($this->img->HrefValue, "href");
+			} else {
+				$this->img->HrefValue = "";
+			}
+			$this->img->HrefValue2 = $this->img->UploadPath . $this->img->Upload->DbValue;
 
 			// status
 			$this->status->LinkCustomAttributes = "";
@@ -2092,8 +2143,21 @@ class cslide_list extends cslide {
 			// img
 			$this->img->EditAttrs["class"] = "form-control";
 			$this->img->EditCustomAttributes = "";
-			$this->img->EditValue = ew_HtmlEncode($this->img->CurrentValue);
-			$this->img->PlaceHolder = ew_RemoveHtml($this->img->FldCaption());
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->ImageWidth = 0;
+				$this->img->ImageHeight = 94;
+				$this->img->ImageAlt = $this->img->FldAlt();
+				$this->img->EditValue = $this->img->Upload->DbValue;
+			} else {
+				$this->img->EditValue = "";
+			}
+			if (!ew_Empty($this->img->CurrentValue))
+					if ($this->RowIndex == '$rowindex$')
+						$this->img->Upload->FileName = "";
+					else
+						$this->img->Upload->FileName = $this->img->CurrentValue;
+			if (is_numeric($this->RowIndex) && !$this->EventCancelled) ew_RenderUploadField($this->img, $this->RowIndex);
 
 			// status
 			$this->status->EditAttrs["class"] = "form-control";
@@ -2123,7 +2187,15 @@ class cslide_list extends cslide {
 
 			// img
 			$this->img->LinkCustomAttributes = "";
-			$this->img->HrefValue = "";
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->HrefValue = ew_GetFileUploadUrl($this->img, $this->img->Upload->DbValue); // Add prefix/suffix
+				$this->img->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->img->HrefValue = ew_FullUrl($this->img->HrefValue, "href");
+			} else {
+				$this->img->HrefValue = "";
+			}
+			$this->img->HrefValue2 = $this->img->UploadPath . $this->img->Upload->DbValue;
 
 			// status
 			$this->status->LinkCustomAttributes = "";
@@ -2157,7 +2229,7 @@ class cslide_list extends cslide {
 		if (!$this->description->FldIsDetailKey && !is_null($this->description->FormValue) && $this->description->FormValue == "") {
 			ew_AddMessage($gsFormError, str_replace("%s", $this->description->FldCaption(), $this->description->ReqErrMsg));
 		}
-		if (!$this->img->FldIsDetailKey && !is_null($this->img->FormValue) && $this->img->FormValue == "") {
+		if ($this->img->Upload->FileName == "" && !$this->img->Upload->KeepFile) {
 			ew_AddMessage($gsFormError, str_replace("%s", $this->img->FldCaption(), $this->img->ReqErrMsg));
 		}
 		if (!$this->status->FldIsDetailKey && !is_null($this->status->FormValue) && $this->status->FormValue == "") {
@@ -2276,6 +2348,8 @@ class cslide_list extends cslide {
 			// Save old values
 			$rsold = &$rs->fields;
 			$this->LoadDbValues($rsold);
+			$this->img->OldUploadPath = "../uploads/slide";
+			$this->img->UploadPath = $this->img->OldUploadPath;
 			$rsnew = array();
 
 			// title
@@ -2285,13 +2359,46 @@ class cslide_list extends cslide {
 			$this->description->SetDbValueDef($rsnew, $this->description->CurrentValue, "", $this->description->ReadOnly);
 
 			// img
-			$this->img->SetDbValueDef($rsnew, $this->img->CurrentValue, "", $this->img->ReadOnly);
+			if ($this->img->Visible && !$this->img->ReadOnly && !$this->img->Upload->KeepFile) {
+				$this->img->Upload->DbValue = $rsold['img']; // Get original value
+				if ($this->img->Upload->FileName == "") {
+					$rsnew['img'] = NULL;
+				} else {
+					$rsnew['img'] = $this->img->Upload->FileName;
+				}
+			}
 
 			// status
 			$this->status->SetDbValueDef($rsnew, $this->status->CurrentValue, 0, $this->status->ReadOnly);
 
 			// url
 			$this->url->SetDbValueDef($rsnew, $this->url->CurrentValue, "", $this->url->ReadOnly);
+			if ($this->img->Visible && !$this->img->Upload->KeepFile) {
+				$this->img->UploadPath = "../uploads/slide";
+				$OldFiles = ew_Empty($this->img->Upload->DbValue) ? array() : array($this->img->Upload->DbValue);
+				if (!ew_Empty($this->img->Upload->FileName)) {
+					$NewFiles = array($this->img->Upload->FileName);
+					$NewFileCount = count($NewFiles);
+					for ($i = 0; $i < $NewFileCount; $i++) {
+						$fldvar = ($this->img->Upload->Index < 0) ? $this->img->FldVar : substr($this->img->FldVar, 0, 1) . $this->img->Upload->Index . substr($this->img->FldVar, 1);
+						if ($NewFiles[$i] <> "") {
+							$file = $NewFiles[$i];
+							if (file_exists(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file)) {
+								$file1 = ew_UploadFileNameEx($this->img->PhysicalUploadPath(), $file); // Get new file name
+								if ($file1 <> $file) { // Rename temp file
+									while (file_exists(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file1) || file_exists($this->img->PhysicalUploadPath() . $file1)) // Make sure no file name clash
+										$file1 = ew_UniqueFilename($this->img->PhysicalUploadPath(), $file1, TRUE); // Use indexed name
+									rename(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file, ew_UploadTempPath($fldvar, $this->img->TblVar) . $file1);
+									$NewFiles[$i] = $file1;
+								}
+							}
+						}
+					}
+					$this->img->Upload->DbValue = empty($OldFiles) ? "" : implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $OldFiles);
+					$this->img->Upload->FileName = implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $NewFiles);
+					$this->img->SetDbValueDef($rsnew, $this->img->Upload->FileName, "", $this->img->ReadOnly);
+				}
+			}
 
 			// Call Row Updating event
 			$bUpdateRow = $this->Row_Updating($rsold, $rsnew);
@@ -2303,6 +2410,30 @@ class cslide_list extends cslide {
 					$EditRow = TRUE; // No field to update
 				$conn->raiseErrorFn = '';
 				if ($EditRow) {
+					if ($this->img->Visible && !$this->img->Upload->KeepFile) {
+						$OldFiles = ew_Empty($this->img->Upload->DbValue) ? array() : array($this->img->Upload->DbValue);
+						if (!ew_Empty($this->img->Upload->FileName)) {
+							$NewFiles = array($this->img->Upload->FileName);
+							$NewFiles2 = array($rsnew['img']);
+							$NewFileCount = count($NewFiles);
+							for ($i = 0; $i < $NewFileCount; $i++) {
+								$fldvar = ($this->img->Upload->Index < 0) ? $this->img->FldVar : substr($this->img->FldVar, 0, 1) . $this->img->Upload->Index . substr($this->img->FldVar, 1);
+								if ($NewFiles[$i] <> "") {
+									$file = ew_UploadTempPath($fldvar, $this->img->TblVar) . $NewFiles[$i];
+									if (file_exists($file)) {
+										if (@$NewFiles2[$i] <> "") // Use correct file name
+											$NewFiles[$i] = $NewFiles2[$i];
+										if (!$this->img->Upload->SaveToFile($NewFiles[$i], TRUE, $i)) { // Just replace
+											$this->setFailureMessage($Language->Phrase("UploadErrMsg7"));
+											return FALSE;
+										}
+									}
+								}
+							}
+						} else {
+							$NewFiles = array();
+						}
+					}
 				}
 			} else {
 				if ($this->getSuccessMessage() <> "" || $this->getFailureMessage() <> "") {
@@ -2322,6 +2453,9 @@ class cslide_list extends cslide {
 		if ($EditRow)
 			$this->Row_Updated($rsold, $rsnew);
 		$rs->Close();
+
+		// img
+		ew_CleanUploadTempPath($this->img, $this->img->Upload->Index);
 		return $EditRow;
 	}
 
@@ -2333,6 +2467,8 @@ class cslide_list extends cslide {
 		// Load db values from rsold
 		$this->LoadDbValues($rsold);
 		if ($rsold) {
+			$this->img->OldUploadPath = "../uploads/slide";
+			$this->img->UploadPath = $this->img->OldUploadPath;
 		}
 		$rsnew = array();
 
@@ -2343,13 +2479,46 @@ class cslide_list extends cslide {
 		$this->description->SetDbValueDef($rsnew, $this->description->CurrentValue, "", FALSE);
 
 		// img
-		$this->img->SetDbValueDef($rsnew, $this->img->CurrentValue, "", FALSE);
+		if ($this->img->Visible && !$this->img->Upload->KeepFile) {
+			$this->img->Upload->DbValue = ""; // No need to delete old file
+			if ($this->img->Upload->FileName == "") {
+				$rsnew['img'] = NULL;
+			} else {
+				$rsnew['img'] = $this->img->Upload->FileName;
+			}
+		}
 
 		// status
 		$this->status->SetDbValueDef($rsnew, $this->status->CurrentValue, 0, FALSE);
 
 		// url
 		$this->url->SetDbValueDef($rsnew, $this->url->CurrentValue, "", FALSE);
+		if ($this->img->Visible && !$this->img->Upload->KeepFile) {
+			$this->img->UploadPath = "../uploads/slide";
+			$OldFiles = ew_Empty($this->img->Upload->DbValue) ? array() : array($this->img->Upload->DbValue);
+			if (!ew_Empty($this->img->Upload->FileName)) {
+				$NewFiles = array($this->img->Upload->FileName);
+				$NewFileCount = count($NewFiles);
+				for ($i = 0; $i < $NewFileCount; $i++) {
+					$fldvar = ($this->img->Upload->Index < 0) ? $this->img->FldVar : substr($this->img->FldVar, 0, 1) . $this->img->Upload->Index . substr($this->img->FldVar, 1);
+					if ($NewFiles[$i] <> "") {
+						$file = $NewFiles[$i];
+						if (file_exists(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file)) {
+							$file1 = ew_UploadFileNameEx($this->img->PhysicalUploadPath(), $file); // Get new file name
+							if ($file1 <> $file) { // Rename temp file
+								while (file_exists(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file1) || file_exists($this->img->PhysicalUploadPath() . $file1)) // Make sure no file name clash
+									$file1 = ew_UniqueFilename($this->img->PhysicalUploadPath(), $file1, TRUE); // Use indexed name
+								rename(ew_UploadTempPath($fldvar, $this->img->TblVar) . $file, ew_UploadTempPath($fldvar, $this->img->TblVar) . $file1);
+								$NewFiles[$i] = $file1;
+							}
+						}
+					}
+				}
+				$this->img->Upload->DbValue = empty($OldFiles) ? "" : implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $OldFiles);
+				$this->img->Upload->FileName = implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $NewFiles);
+				$this->img->SetDbValueDef($rsnew, $this->img->Upload->FileName, "", FALSE);
+			}
+		}
 
 		// Call Row Inserting event
 		$rs = ($rsold == NULL) ? NULL : $rsold->fields;
@@ -2359,6 +2528,30 @@ class cslide_list extends cslide {
 			$AddRow = $this->Insert($rsnew);
 			$conn->raiseErrorFn = '';
 			if ($AddRow) {
+				if ($this->img->Visible && !$this->img->Upload->KeepFile) {
+					$OldFiles = ew_Empty($this->img->Upload->DbValue) ? array() : array($this->img->Upload->DbValue);
+					if (!ew_Empty($this->img->Upload->FileName)) {
+						$NewFiles = array($this->img->Upload->FileName);
+						$NewFiles2 = array($rsnew['img']);
+						$NewFileCount = count($NewFiles);
+						for ($i = 0; $i < $NewFileCount; $i++) {
+							$fldvar = ($this->img->Upload->Index < 0) ? $this->img->FldVar : substr($this->img->FldVar, 0, 1) . $this->img->Upload->Index . substr($this->img->FldVar, 1);
+							if ($NewFiles[$i] <> "") {
+								$file = ew_UploadTempPath($fldvar, $this->img->TblVar) . $NewFiles[$i];
+								if (file_exists($file)) {
+									if (@$NewFiles2[$i] <> "") // Use correct file name
+										$NewFiles[$i] = $NewFiles2[$i];
+									if (!$this->img->Upload->SaveToFile($NewFiles[$i], TRUE, $i)) { // Just replace
+										$this->setFailureMessage($Language->Phrase("UploadErrMsg7"));
+										return FALSE;
+									}
+								}
+							}
+						}
+					} else {
+						$NewFiles = array();
+					}
+				}
 			}
 		} else {
 			if ($this->getSuccessMessage() <> "" || $this->getFailureMessage() <> "") {
@@ -2378,6 +2571,9 @@ class cslide_list extends cslide {
 			$rs = ($rsold == NULL) ? NULL : $rsold->fields;
 			$this->Row_Inserted($rs, $rsnew);
 		}
+
+		// img
+		ew_CleanUploadTempPath($this->img, $this->img->Upload->Index);
 		return $AddRow;
 	}
 
@@ -2848,9 +3044,10 @@ fslidelist.Validate = function() {
 			elm = this.GetElements("x" + infix + "_description");
 			if (elm && !ew_IsHidden(elm) && !ew_HasValue(elm))
 				return this.OnError(elm, "<?php echo ew_JsEncode2(str_replace("%s", $slide->description->FldCaption(), $slide->description->ReqErrMsg)) ?>");
-			elm = this.GetElements("x" + infix + "_img");
-			if (elm && !ew_IsHidden(elm) && !ew_HasValue(elm))
-				return this.OnError(elm, "<?php echo ew_JsEncode2(str_replace("%s", $slide->img->FldCaption(), $slide->img->ReqErrMsg)) ?>");
+			felm = this.GetElements("x" + infix + "_img");
+			elm = this.GetElements("fn_x" + infix + "_img");
+			if (felm && elm && !ew_HasValue(elm))
+				return this.OnError(felm, "<?php echo ew_JsEncode2(str_replace("%s", $slide->img->FldCaption(), $slide->img->ReqErrMsg)) ?>");
 			elm = this.GetElements("x" + infix + "_status");
 			if (elm && !ew_IsHidden(elm) && !ew_HasValue(elm))
 				return this.OnError(elm, "<?php echo ew_JsEncode2(str_replace("%s", $slide->status->FldCaption(), $slide->status->ReqErrMsg)) ?>");
@@ -3268,19 +3465,46 @@ $slide_list->ListOptions->Render("body", "left", $slide_list->RowCnt);
 		<td data-name="img"<?php echo $slide->img->CellAttributes() ?>>
 <?php if ($slide->RowType == EW_ROWTYPE_ADD) { // Add record ?>
 <span id="el<?php echo $slide_list->RowCnt ?>_slide_img" class="form-group slide_img">
-<input type="text" data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($slide->img->getPlaceHolder()) ?>" value="<?php echo $slide->img->EditValue ?>"<?php echo $slide->img->EditAttributes() ?>>
+<div id="fd_x<?php echo $slide_list->RowIndex ?>_img">
+<span title="<?php echo $slide->img->FldTitle() ? $slide->img->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($slide->img->ReadOnly || $slide->img->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img"<?php echo $slide->img->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $slide_list->RowIndex ?>_img" id= "fn_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->Upload->FileName ?>">
+<input type="hidden" name="fa_x<?php echo $slide_list->RowIndex ?>_img" id= "fa_x<?php echo $slide_list->RowIndex ?>_img" value="0">
+<input type="hidden" name="fs_x<?php echo $slide_list->RowIndex ?>_img" id= "fs_x<?php echo $slide_list->RowIndex ?>_img" value="250">
+<input type="hidden" name="fx_x<?php echo $slide_list->RowIndex ?>_img" id= "fx_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $slide_list->RowIndex ?>_img" id= "fm_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $slide_list->RowIndex ?>_img" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <input type="hidden" data-table="slide" data-field="x_img" name="o<?php echo $slide_list->RowIndex ?>_img" id="o<?php echo $slide_list->RowIndex ?>_img" value="<?php echo ew_HtmlEncode($slide->img->OldValue) ?>">
 <?php } ?>
 <?php if ($slide->RowType == EW_ROWTYPE_EDIT) { // Edit record ?>
 <span id="el<?php echo $slide_list->RowCnt ?>_slide_img" class="form-group slide_img">
-<input type="text" data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($slide->img->getPlaceHolder()) ?>" value="<?php echo $slide->img->EditValue ?>"<?php echo $slide->img->EditAttributes() ?>>
+<div id="fd_x<?php echo $slide_list->RowIndex ?>_img">
+<span title="<?php echo $slide->img->FldTitle() ? $slide->img->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($slide->img->ReadOnly || $slide->img->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img"<?php echo $slide->img->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $slide_list->RowIndex ?>_img" id= "fn_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->Upload->FileName ?>">
+<?php if (@$_POST["fa_x<?php echo $slide_list->RowIndex ?>_img"] == "0") { ?>
+<input type="hidden" name="fa_x<?php echo $slide_list->RowIndex ?>_img" id= "fa_x<?php echo $slide_list->RowIndex ?>_img" value="0">
+<?php } else { ?>
+<input type="hidden" name="fa_x<?php echo $slide_list->RowIndex ?>_img" id= "fa_x<?php echo $slide_list->RowIndex ?>_img" value="1">
+<?php } ?>
+<input type="hidden" name="fs_x<?php echo $slide_list->RowIndex ?>_img" id= "fs_x<?php echo $slide_list->RowIndex ?>_img" value="250">
+<input type="hidden" name="fx_x<?php echo $slide_list->RowIndex ?>_img" id= "fx_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $slide_list->RowIndex ?>_img" id= "fm_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $slide_list->RowIndex ?>_img" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <?php } ?>
 <?php if ($slide->RowType == EW_ROWTYPE_VIEW) { // View record ?>
 <span id="el<?php echo $slide_list->RowCnt ?>_slide_img" class="slide_img">
-<span<?php echo $slide->img->ViewAttributes() ?>>
-<?php echo $slide->img->ListViewValue() ?></span>
+<span>
+<?php echo ew_GetFileViewTag($slide->img, $slide->img->ListViewValue()) ?>
+</span>
 </span>
 <?php } ?>
 </td>
@@ -3393,7 +3617,18 @@ $slide_list->ListOptions->Render("body", "left", $slide_list->RowIndex);
 	<?php if ($slide->img->Visible) { // img ?>
 		<td data-name="img">
 <span id="el$rowindex$_slide_img" class="form-group slide_img">
-<input type="text" data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($slide->img->getPlaceHolder()) ?>" value="<?php echo $slide->img->EditValue ?>"<?php echo $slide->img->EditAttributes() ?>>
+<div id="fd_x<?php echo $slide_list->RowIndex ?>_img">
+<span title="<?php echo $slide->img->FldTitle() ? $slide->img->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($slide->img->ReadOnly || $slide->img->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="slide" data-field="x_img" name="x<?php echo $slide_list->RowIndex ?>_img" id="x<?php echo $slide_list->RowIndex ?>_img"<?php echo $slide->img->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $slide_list->RowIndex ?>_img" id= "fn_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->Upload->FileName ?>">
+<input type="hidden" name="fa_x<?php echo $slide_list->RowIndex ?>_img" id= "fa_x<?php echo $slide_list->RowIndex ?>_img" value="0">
+<input type="hidden" name="fs_x<?php echo $slide_list->RowIndex ?>_img" id= "fs_x<?php echo $slide_list->RowIndex ?>_img" value="250">
+<input type="hidden" name="fx_x<?php echo $slide_list->RowIndex ?>_img" id= "fx_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $slide_list->RowIndex ?>_img" id= "fm_x<?php echo $slide_list->RowIndex ?>_img" value="<?php echo $slide->img->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $slide_list->RowIndex ?>_img" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <input type="hidden" data-table="slide" data-field="x_img" name="o<?php echo $slide_list->RowIndex ?>_img" id="o<?php echo $slide_list->RowIndex ?>_img" value="<?php echo ew_HtmlEncode($slide->img->OldValue) ?>">
 </td>

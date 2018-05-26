@@ -728,6 +728,12 @@
       </field>
       <field id="province_id">
         <phrase id="fldcaption" value="province id" />
+        <phrase id="fldtagvalue1" value="Siem Reap" />
+        <phrase id="fldtagcaption1" value="Siem Reap" />
+        <phrase id="fldtagvalue2" value="Phnom Penh" />
+        <phrase id="fldtagcaption2" value="Phnom Penh" />
+        <phrase id="fldtagvalue3" value="Battambang" />
+        <phrase id="fldtagcaption3" value="Battambang" />
       </field>
       <field id="skill_id">
         <phrase id="fldcaption" value="skill id" />

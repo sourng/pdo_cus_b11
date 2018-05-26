@@ -86,13 +86,18 @@ class cinstructor extends cTable {
 		$this->fields['address'] = &$this->address;
 
 		// province_id
-		$this->province_id = new cField('instructor', 'instructor', 'x_province_id', 'province_id', '`province_id`', '`province_id`', 200, -1, FALSE, '`province_id`', FALSE, FALSE, FALSE, 'FORMATTED TEXT', 'TEXT');
+		$this->province_id = new cField('instructor', 'instructor', 'x_province_id', 'province_id', '`province_id`', '`province_id`', 200, -1, FALSE, '`province_id`', FALSE, FALSE, FALSE, 'FORMATTED TEXT', 'SELECT');
 		$this->province_id->Sortable = TRUE; // Allow sort
+		$this->province_id->UsePleaseSelect = TRUE; // Use PleaseSelect by default
+		$this->province_id->PleaseSelectText = $Language->Phrase("PleaseSelect"); // PleaseSelect text
+		$this->province_id->OptionCount = 3;
 		$this->fields['province_id'] = &$this->province_id;
 
 		// skill_id
-		$this->skill_id = new cField('instructor', 'instructor', 'x_skill_id', 'skill_id', '`skill_id`', '`skill_id`', 200, -1, FALSE, '`skill_id`', FALSE, FALSE, FALSE, 'FORMATTED TEXT', 'TEXT');
+		$this->skill_id = new cField('instructor', 'instructor', 'x_skill_id', 'skill_id', '`skill_id`', '`skill_id`', 200, -1, FALSE, '`EV__skill_id`', TRUE, TRUE, TRUE, 'FORMATTED TEXT', 'SELECT');
 		$this->skill_id->Sortable = TRUE; // Allow sort
+		$this->skill_id->UsePleaseSelect = TRUE; // Use PleaseSelect by default
+		$this->skill_id->PleaseSelectText = $Language->Phrase("PleaseSelect"); // PleaseSelect text
 		$this->fields['skill_id'] = &$this->skill_id;
 
 		// facebook
@@ -116,7 +121,7 @@ class cinstructor extends cTable {
 		$this->fields['detail'] = &$this->detail;
 
 		// picture
-		$this->picture = new cField('instructor', 'instructor', 'x_picture', 'picture', '`picture`', '`picture`', 200, -1, FALSE, '`picture`', FALSE, FALSE, FALSE, 'FORMATTED TEXT', 'TEXT');
+		$this->picture = new cField('instructor', 'instructor', 'x_picture', 'picture', '`picture`', '`picture`', 200, -1, TRUE, '`picture`', FALSE, FALSE, FALSE, 'IMAGE', 'FILE');
 		$this->picture->Sortable = TRUE; // Allow sort
 		$this->fields['picture'] = &$this->picture;
 
@@ -159,9 +164,20 @@ class cinstructor extends cTable {
 			}
 			$ofld->setSort($sThisSort);
 			$this->setSessionOrderBy($sSortField . " " . $sThisSort); // Save to Session
+			$sSortFieldList = ($ofld->FldVirtualExpression <> "") ? $ofld->FldVirtualExpression : $sSortField;
+			$this->setSessionOrderByList($sSortFieldList . " " . $sThisSort); // Save to Session
 		} else {
 			$ofld->setSort("");
 		}
+	}
+
+	// Session ORDER BY for List page
+	function getSessionOrderByList() {
+		return @$_SESSION[EW_PROJECT_NAME . "_" . $this->TableVar . "_" . EW_TABLE_ORDER_BY_LIST];
+	}
+
+	function setSessionOrderByList($v) {
+		$_SESSION[EW_PROJECT_NAME . "_" . $this->TableVar . "_" . EW_TABLE_ORDER_BY_LIST] = $v;
 	}
 
 	// Table level SQL
@@ -190,6 +206,23 @@ class cinstructor extends cTable {
 
 	function setSqlSelect($v) {
 		$this->_SqlSelect = $v;
+	}
+	var $_SqlSelectList = "";
+
+	function getSqlSelectList() { // Select for List page
+		$select = "";
+		$select = "SELECT * FROM (" .
+			"SELECT *, (SELECT DISTINCT `skill_title` FROM `skill` `EW_TMP_LOOKUPTABLE` WHERE `EW_TMP_LOOKUPTABLE`.`skill_id` = `instructor`.`skill_id` LIMIT 1) AS `EV__skill_id` FROM `instructor`" .
+			") `EW_TMP_TABLE`";
+		return ($this->_SqlSelectList <> "") ? $this->_SqlSelectList : $select;
+	}
+
+	function SqlSelectList() { // For backward compatibility
+		return $this->getSqlSelectList();
+	}
+
+	function setSqlSelectList($v) {
+		$this->_SqlSelectList = $v;
 	}
 	var $_SqlWhere = "";
 
@@ -302,16 +335,38 @@ class cinstructor extends cTable {
 		ew_AddFilter($sFilter, $this->CurrentFilter);
 		$sFilter = $this->ApplyUserIDFilters($sFilter);
 		$this->Recordset_Selecting($sFilter);
-		$sSelect = $this->getSqlSelect();
-		$sSort = $this->UseSessionForListSQL ? $this->getSessionOrderBy() : "";
+		if ($this->UseVirtualFields()) {
+			$sSelect = $this->getSqlSelectList();
+			$sSort = $this->UseSessionForListSQL ? $this->getSessionOrderByList() : "";
+		} else {
+			$sSelect = $this->getSqlSelect();
+			$sSort = $this->UseSessionForListSQL ? $this->getSessionOrderBy() : "";
+		}
 		return ew_BuildSelectSql($sSelect, $this->getSqlWhere(), $this->getSqlGroupBy(),
 			$this->getSqlHaving(), $this->getSqlOrderBy(), $sFilter, $sSort);
 	}
 
 	// Get ORDER BY clause
 	function GetOrderBy() {
-		$sSort = $this->getSessionOrderBy();
+		$sSort = ($this->UseVirtualFields()) ? $this->getSessionOrderByList() : $this->getSessionOrderBy();
 		return ew_BuildSelectSql("", "", "", "", $this->getSqlOrderBy(), "", $sSort);
+	}
+
+	// Check if virtual fields is used in SQL
+	function UseVirtualFields() {
+		$sWhere = $this->UseSessionForListSQL ? $this->getSessionWhere() : $this->CurrentFilter;
+		$sOrderBy = $this->UseSessionForListSQL ? $this->getSessionOrderByList() : "";
+		if ($sWhere <> "")
+			$sWhere = " " . str_replace(array("(",")"), array("",""), $sWhere) . " ";
+		if ($sOrderBy <> "")
+			$sOrderBy = " " . str_replace(array("(",")"), array("",""), $sOrderBy) . " ";
+		if ($this->skill_id->AdvancedSearch->SearchValue <> "" ||
+			$this->skill_id->AdvancedSearch->SearchValue2 <> "" ||
+			strpos($sWhere, " " . $this->skill_id->FldVirtualExpression . " ") !== FALSE)
+			return TRUE;
+		if (strpos($sOrderBy, " " . $this->skill_id->FldVirtualExpression . " ") !== FALSE)
+			return TRUE;
+		return FALSE;
 	}
 
 	// Try to get record count
@@ -362,7 +417,10 @@ class cinstructor extends cTable {
 		$select = $this->TableType == 'CUSTOMVIEW' ? $this->getSqlSelect() : "SELECT * FROM " . $this->getSqlFrom();
 		$groupBy = $this->TableType == 'CUSTOMVIEW' ? $this->getSqlGroupBy() : "";
 		$having = $this->TableType == 'CUSTOMVIEW' ? $this->getSqlHaving() : "";
-		$sql = ew_BuildSelectSql($select, $this->getSqlWhere(), $groupBy, $having, "", $filter, "");
+		if ($this->UseVirtualFields())
+			$sql = ew_BuildSelectSql($this->getSqlSelectList(), $this->getSqlWhere(), $groupBy, $having, "", $filter, "");
+		else
+			$sql = ew_BuildSelectSql($select, $this->getSqlWhere(), $groupBy, $having, "", $filter, "");
 		$cnt = $this->TryGetRecordCount($sql);
 		if ($cnt == -1) {
 			$conn = &$this->Connection();
@@ -709,7 +767,7 @@ class cinstructor extends cTable {
 		$this->twitter->setDbValue($rs->fields('twitter'));
 		$this->gplus->setDbValue($rs->fields('gplus'));
 		$this->detail->setDbValue($rs->fields('detail'));
-		$this->picture->setDbValue($rs->fields('picture'));
+		$this->picture->Upload->DbValue = $rs->fields('picture');
 		$this->status->setDbValue($rs->fields('status'));
 	}
 
@@ -761,11 +819,38 @@ class cinstructor extends cTable {
 		$this->address->ViewCustomAttributes = "";
 
 		// province_id
-		$this->province_id->ViewValue = $this->province_id->CurrentValue;
+		if (strval($this->province_id->CurrentValue) <> "") {
+			$this->province_id->ViewValue = $this->province_id->OptionCaption($this->province_id->CurrentValue);
+		} else {
+			$this->province_id->ViewValue = NULL;
+		}
 		$this->province_id->ViewCustomAttributes = "";
 
 		// skill_id
-		$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+		if ($this->skill_id->VirtualValue <> "") {
+			$this->skill_id->ViewValue = $this->skill_id->VirtualValue;
+		} else {
+		if (strval($this->skill_id->CurrentValue) <> "") {
+			$sFilterWrk = "`skill_id`" . ew_SearchString("=", $this->skill_id->CurrentValue, EW_DATATYPE_NUMBER, "");
+		$sSqlWrk = "SELECT DISTINCT `skill_id`, `skill_title` AS `DispFld`, '' AS `Disp2Fld`, '' AS `Disp3Fld`, '' AS `Disp4Fld` FROM `skill`";
+		$sWhereWrk = "";
+		$this->skill_id->LookupFilters = array("dx1" => '`skill_title`');
+		ew_AddFilter($sWhereWrk, $sFilterWrk);
+		$this->Lookup_Selecting($this->skill_id, $sWhereWrk); // Call Lookup Selecting
+		if ($sWhereWrk <> "") $sSqlWrk .= " WHERE " . $sWhereWrk;
+			$rswrk = Conn()->Execute($sSqlWrk);
+			if ($rswrk && !$rswrk->EOF) { // Lookup values found
+				$arwrk = array();
+				$arwrk[1] = $rswrk->fields('DispFld');
+				$this->skill_id->ViewValue = $this->skill_id->DisplayValue($arwrk);
+				$rswrk->Close();
+			} else {
+				$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+			}
+		} else {
+			$this->skill_id->ViewValue = NULL;
+		}
+		}
 		$this->skill_id->ViewCustomAttributes = "";
 
 		// facebook
@@ -785,7 +870,15 @@ class cinstructor extends cTable {
 		$this->detail->ViewCustomAttributes = "";
 
 		// picture
-		$this->picture->ViewValue = $this->picture->CurrentValue;
+		$this->picture->UploadPath = "../uploads/instructor";
+		if (!ew_Empty($this->picture->Upload->DbValue)) {
+			$this->picture->ImageWidth = 0;
+			$this->picture->ImageHeight = 94;
+			$this->picture->ImageAlt = $this->picture->FldAlt();
+			$this->picture->ViewValue = $this->picture->Upload->DbValue;
+		} else {
+			$this->picture->ViewValue = "";
+		}
 		$this->picture->ViewCustomAttributes = "";
 
 		// status
@@ -854,8 +947,22 @@ class cinstructor extends cTable {
 
 		// picture
 		$this->picture->LinkCustomAttributes = "";
-		$this->picture->HrefValue = "";
+		$this->picture->UploadPath = "../uploads/instructor";
+		if (!ew_Empty($this->picture->Upload->DbValue)) {
+			$this->picture->HrefValue = ew_GetFileUploadUrl($this->picture, $this->picture->Upload->DbValue); // Add prefix/suffix
+			$this->picture->LinkAttrs["target"] = ""; // Add target
+			if ($this->Export <> "") $this->picture->HrefValue = ew_FullUrl($this->picture->HrefValue, "href");
+		} else {
+			$this->picture->HrefValue = "";
+		}
+		$this->picture->HrefValue2 = $this->picture->UploadPath . $this->picture->Upload->DbValue;
 		$this->picture->TooltipValue = "";
+		if ($this->picture->UseColorbox) {
+			if (ew_Empty($this->picture->TooltipValue))
+				$this->picture->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+			$this->picture->LinkAttrs["data-rel"] = "instructor_x_picture";
+			ew_AppendClass($this->picture->LinkAttrs["class"], "ewLightbox");
+		}
 
 		// status
 		$this->status->LinkCustomAttributes = "";
@@ -915,13 +1022,40 @@ class cinstructor extends cTable {
 		// province_id
 		$this->province_id->EditAttrs["class"] = "form-control";
 		$this->province_id->EditCustomAttributes = "";
-		$this->province_id->EditValue = $this->province_id->CurrentValue;
+		if (strval($this->province_id->CurrentValue) <> "") {
+			$this->province_id->EditValue = $this->province_id->OptionCaption($this->province_id->CurrentValue);
+		} else {
+			$this->province_id->EditValue = NULL;
+		}
 		$this->province_id->ViewCustomAttributes = "";
 
 		// skill_id
 		$this->skill_id->EditAttrs["class"] = "form-control";
 		$this->skill_id->EditCustomAttributes = "";
-		$this->skill_id->EditValue = $this->skill_id->CurrentValue;
+		if ($this->skill_id->VirtualValue <> "") {
+			$this->skill_id->EditValue = $this->skill_id->VirtualValue;
+		} else {
+		if (strval($this->skill_id->CurrentValue) <> "") {
+			$sFilterWrk = "`skill_id`" . ew_SearchString("=", $this->skill_id->CurrentValue, EW_DATATYPE_NUMBER, "");
+		$sSqlWrk = "SELECT DISTINCT `skill_id`, `skill_title` AS `DispFld`, '' AS `Disp2Fld`, '' AS `Disp3Fld`, '' AS `Disp4Fld` FROM `skill`";
+		$sWhereWrk = "";
+		$this->skill_id->LookupFilters = array("dx1" => '`skill_title`');
+		ew_AddFilter($sWhereWrk, $sFilterWrk);
+		$this->Lookup_Selecting($this->skill_id, $sWhereWrk); // Call Lookup Selecting
+		if ($sWhereWrk <> "") $sSqlWrk .= " WHERE " . $sWhereWrk;
+			$rswrk = Conn()->Execute($sSqlWrk);
+			if ($rswrk && !$rswrk->EOF) { // Lookup values found
+				$arwrk = array();
+				$arwrk[1] = $rswrk->fields('DispFld');
+				$this->skill_id->EditValue = $this->skill_id->DisplayValue($arwrk);
+				$rswrk->Close();
+			} else {
+				$this->skill_id->EditValue = $this->skill_id->CurrentValue;
+			}
+		} else {
+			$this->skill_id->EditValue = NULL;
+		}
+		}
 		$this->skill_id->ViewCustomAttributes = "";
 
 		// facebook
@@ -951,8 +1085,17 @@ class cinstructor extends cTable {
 		// picture
 		$this->picture->EditAttrs["class"] = "form-control";
 		$this->picture->EditCustomAttributes = "";
-		$this->picture->EditValue = $this->picture->CurrentValue;
-		$this->picture->PlaceHolder = ew_RemoveHtml($this->picture->FldCaption());
+		$this->picture->UploadPath = "../uploads/instructor";
+		if (!ew_Empty($this->picture->Upload->DbValue)) {
+			$this->picture->ImageWidth = 0;
+			$this->picture->ImageHeight = 94;
+			$this->picture->ImageAlt = $this->picture->FldAlt();
+			$this->picture->EditValue = $this->picture->Upload->DbValue;
+		} else {
+			$this->picture->EditValue = "";
+		}
+		if (!ew_Empty($this->picture->CurrentValue))
+				$this->picture->Upload->FileName = $this->picture->CurrentValue;
 
 		// status
 		$this->status->EditAttrs["class"] = "form-control";

@@ -1443,6 +1443,8 @@ class clesson_grid extends clesson {
 		// image
 		$this->image->UploadPath = "../uploads/lesson";
 		if (!ew_Empty($this->image->Upload->DbValue)) {
+			$this->image->ImageWidth = 0;
+			$this->image->ImageHeight = 94;
 			$this->image->ImageAlt = $this->image->FldAlt();
 			$this->image->ViewValue = $this->image->Upload->DbValue;
 		} else {
@@ -1562,6 +1564,8 @@ class clesson_grid extends clesson {
 			$this->image->EditCustomAttributes = "";
 			$this->image->UploadPath = "../uploads/lesson";
 			if (!ew_Empty($this->image->Upload->DbValue)) {
+				$this->image->ImageWidth = 0;
+				$this->image->ImageHeight = 94;
 				$this->image->ImageAlt = $this->image->FldAlt();
 				$this->image->EditValue = $this->image->Upload->DbValue;
 			} else {
@@ -1647,6 +1651,8 @@ class clesson_grid extends clesson {
 			$this->image->EditCustomAttributes = "";
 			$this->image->UploadPath = "../uploads/lesson";
 			if (!ew_Empty($this->image->Upload->DbValue)) {
+				$this->image->ImageWidth = 0;
+				$this->image->ImageHeight = 94;
 				$this->image->ImageAlt = $this->image->FldAlt();
 				$this->image->EditValue = $this->image->Upload->DbValue;
 			} else {

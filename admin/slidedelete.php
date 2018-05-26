@@ -492,7 +492,8 @@ class cslide_delete extends cslide {
 		$this->slide_id->setDbValue($row['slide_id']);
 		$this->title->setDbValue($row['title']);
 		$this->description->setDbValue($row['description']);
-		$this->img->setDbValue($row['img']);
+		$this->img->Upload->DbValue = $row['img'];
+		$this->img->setDbValue($this->img->Upload->DbValue);
 		$this->status->setDbValue($row['status']);
 		$this->url->setDbValue($row['url']);
 	}
@@ -517,7 +518,7 @@ class cslide_delete extends cslide {
 		$this->slide_id->DbValue = $row['slide_id'];
 		$this->title->DbValue = $row['title'];
 		$this->description->DbValue = $row['description'];
-		$this->img->DbValue = $row['img'];
+		$this->img->Upload->DbValue = $row['img'];
 		$this->status->DbValue = $row['status'];
 		$this->url->DbValue = $row['url'];
 	}
@@ -554,7 +555,15 @@ class cslide_delete extends cslide {
 		$this->description->ViewCustomAttributes = "";
 
 		// img
-		$this->img->ViewValue = $this->img->CurrentValue;
+		$this->img->UploadPath = "../uploads/slide";
+		if (!ew_Empty($this->img->Upload->DbValue)) {
+			$this->img->ImageWidth = 0;
+			$this->img->ImageHeight = 94;
+			$this->img->ImageAlt = $this->img->FldAlt();
+			$this->img->ViewValue = $this->img->Upload->DbValue;
+		} else {
+			$this->img->ViewValue = "";
+		}
 		$this->img->ViewCustomAttributes = "";
 
 		// status
@@ -582,8 +591,22 @@ class cslide_delete extends cslide {
 
 			// img
 			$this->img->LinkCustomAttributes = "";
-			$this->img->HrefValue = "";
+			$this->img->UploadPath = "../uploads/slide";
+			if (!ew_Empty($this->img->Upload->DbValue)) {
+				$this->img->HrefValue = ew_GetFileUploadUrl($this->img, $this->img->Upload->DbValue); // Add prefix/suffix
+				$this->img->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->img->HrefValue = ew_FullUrl($this->img->HrefValue, "href");
+			} else {
+				$this->img->HrefValue = "";
+			}
+			$this->img->HrefValue2 = $this->img->UploadPath . $this->img->Upload->DbValue;
 			$this->img->TooltipValue = "";
+			if ($this->img->UseColorbox) {
+				if (ew_Empty($this->img->TooltipValue))
+					$this->img->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+				$this->img->LinkAttrs["data-rel"] = "slide_x_img";
+				ew_AppendClass($this->img->LinkAttrs["class"], "ewLightbox");
+			}
 
 			// status
 			$this->status->LinkCustomAttributes = "";
@@ -893,8 +916,9 @@ while (!$slide_delete->Recordset->EOF) {
 <?php if ($slide->img->Visible) { // img ?>
 		<td<?php echo $slide->img->CellAttributes() ?>>
 <span id="el<?php echo $slide_delete->RowCnt ?>_slide_img" class="slide_img">
-<span<?php echo $slide->img->ViewAttributes() ?>>
-<?php echo $slide->img->ListViewValue() ?></span>
+<span>
+<?php echo ew_GetFileViewTag($slide->img, $slide->img->ListViewValue()) ?>
+</span>
 </span>
 </td>
 <?php } ?>

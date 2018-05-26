@@ -933,7 +933,7 @@ class cinstructor_list extends cinstructor {
 			return FALSE;
 		if ($objForm->HasValue("x_province_id") && $objForm->HasValue("o_province_id") && $this->province_id->CurrentValue <> $this->province_id->OldValue)
 			return FALSE;
-		if ($objForm->HasValue("x_picture") && $objForm->HasValue("o_picture") && $this->picture->CurrentValue <> $this->picture->OldValue)
+		if (!ew_Empty($this->picture->Upload->Value))
 			return FALSE;
 		return TRUE;
 	}
@@ -1386,6 +1386,7 @@ class cinstructor_list extends cinstructor {
 			if ($this->Command == "resetsort") {
 				$sOrderBy = "";
 				$this->setSessionOrderBy($sOrderBy);
+				$this->setSessionOrderByList($sOrderBy);
 				$this->instructor_id->setSort("");
 				$this->first_name->setSort("");
 				$this->last_name->setSort("");
@@ -1850,6 +1851,16 @@ class cinstructor_list extends cinstructor {
 		}
 	}
 
+	// Get upload files
+	function GetUploadFiles() {
+		global $objForm, $Language;
+
+		// Get upload data
+		$this->picture->Upload->Index = $objForm->Index;
+		$this->picture->Upload->UploadFile();
+		$this->picture->CurrentValue = $this->picture->Upload->FileName;
+	}
+
 	// Load default values
 	function LoadDefaultValues() {
 		$this->instructor_id->CurrentValue = NULL;
@@ -1876,8 +1887,8 @@ class cinstructor_list extends cinstructor {
 		$this->gplus->OldValue = $this->gplus->CurrentValue;
 		$this->detail->CurrentValue = NULL;
 		$this->detail->OldValue = $this->detail->CurrentValue;
-		$this->picture->CurrentValue = NULL;
-		$this->picture->OldValue = $this->picture->CurrentValue;
+		$this->picture->Upload->DbValue = NULL;
+		$this->picture->OldValue = $this->picture->Upload->DbValue;
 		$this->status->CurrentValue = NULL;
 		$this->status->OldValue = $this->status->CurrentValue;
 	}
@@ -1894,6 +1905,7 @@ class cinstructor_list extends cinstructor {
 
 		// Load from form
 		global $objForm;
+		$this->GetUploadFiles(); // Get upload files
 		if (!$this->instructor_id->FldIsDetailKey && $this->CurrentAction <> "gridadd" && $this->CurrentAction <> "add")
 			$this->instructor_id->setFormValue($objForm->GetValue("x_instructor_id"));
 		if (!$this->first_name->FldIsDetailKey) {
@@ -1914,9 +1926,6 @@ class cinstructor_list extends cinstructor {
 		if (!$this->province_id->FldIsDetailKey) {
 			$this->province_id->setFormValue($objForm->GetValue("x_province_id"));
 		}
-		if (!$this->picture->FldIsDetailKey) {
-			$this->picture->setFormValue($objForm->GetValue("x_picture"));
-		}
 		if (!$this->skill_id->FldIsDetailKey)
 			$this->skill_id->setFormValue($objForm->GetValue("x_skill_id"));
 	}
@@ -1933,7 +1942,6 @@ class cinstructor_list extends cinstructor {
 		$this->gender->CurrentValue = $this->gender->FormValue;
 		$this->address->CurrentValue = $this->address->FormValue;
 		$this->province_id->CurrentValue = $this->province_id->FormValue;
-		$this->picture->CurrentValue = $this->picture->FormValue;
 	}
 
 	// Load recordset
@@ -1948,7 +1956,7 @@ class cinstructor_list extends cinstructor {
 		if ($this->UseSelectLimit) {
 			$conn->raiseErrorFn = $GLOBALS["EW_ERROR_FN"];
 			if ($dbtype == "MSSQL") {
-				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset, array("_hasOrderBy" => trim($this->getOrderBy()) || trim($this->getSessionOrderBy())));
+				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset, array("_hasOrderBy" => trim($this->getOrderBy()) || trim($this->getSessionOrderByList())));
 			} else {
 				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset);
 			}
@@ -2003,11 +2011,17 @@ class cinstructor_list extends cinstructor {
 		$this->address->setDbValue($row['address']);
 		$this->province_id->setDbValue($row['province_id']);
 		$this->skill_id->setDbValue($row['skill_id']);
+		if (array_key_exists('EV__skill_id', $rs->fields)) {
+			$this->skill_id->VirtualValue = $rs->fields('EV__skill_id'); // Set up virtual field value
+		} else {
+			$this->skill_id->VirtualValue = ""; // Clear value
+		}
 		$this->facebook->setDbValue($row['facebook']);
 		$this->twitter->setDbValue($row['twitter']);
 		$this->gplus->setDbValue($row['gplus']);
 		$this->detail->setDbValue($row['detail']);
-		$this->picture->setDbValue($row['picture']);
+		$this->picture->Upload->DbValue = $row['picture'];
+		$this->picture->setDbValue($this->picture->Upload->DbValue);
 		$this->status->setDbValue($row['status']);
 	}
 
@@ -2027,7 +2041,7 @@ class cinstructor_list extends cinstructor {
 		$row['twitter'] = $this->twitter->CurrentValue;
 		$row['gplus'] = $this->gplus->CurrentValue;
 		$row['detail'] = $this->detail->CurrentValue;
-		$row['picture'] = $this->picture->CurrentValue;
+		$row['picture'] = $this->picture->Upload->DbValue;
 		$row['status'] = $this->status->CurrentValue;
 		return $row;
 	}
@@ -2049,7 +2063,7 @@ class cinstructor_list extends cinstructor {
 		$this->twitter->DbValue = $row['twitter'];
 		$this->gplus->DbValue = $row['gplus'];
 		$this->detail->DbValue = $row['detail'];
-		$this->picture->DbValue = $row['picture'];
+		$this->picture->Upload->DbValue = $row['picture'];
 		$this->status->DbValue = $row['status'];
 	}
 
@@ -2141,11 +2155,38 @@ class cinstructor_list extends cinstructor {
 		$this->address->ViewCustomAttributes = "";
 
 		// province_id
-		$this->province_id->ViewValue = $this->province_id->CurrentValue;
+		if (strval($this->province_id->CurrentValue) <> "") {
+			$this->province_id->ViewValue = $this->province_id->OptionCaption($this->province_id->CurrentValue);
+		} else {
+			$this->province_id->ViewValue = NULL;
+		}
 		$this->province_id->ViewCustomAttributes = "";
 
 		// skill_id
-		$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+		if ($this->skill_id->VirtualValue <> "") {
+			$this->skill_id->ViewValue = $this->skill_id->VirtualValue;
+		} else {
+		if (strval($this->skill_id->CurrentValue) <> "") {
+			$sFilterWrk = "`skill_id`" . ew_SearchString("=", $this->skill_id->CurrentValue, EW_DATATYPE_NUMBER, "");
+		$sSqlWrk = "SELECT DISTINCT `skill_id`, `skill_title` AS `DispFld`, '' AS `Disp2Fld`, '' AS `Disp3Fld`, '' AS `Disp4Fld` FROM `skill`";
+		$sWhereWrk = "";
+		$this->skill_id->LookupFilters = array("dx1" => '`skill_title`');
+		ew_AddFilter($sWhereWrk, $sFilterWrk);
+		$this->Lookup_Selecting($this->skill_id, $sWhereWrk); // Call Lookup Selecting
+		if ($sWhereWrk <> "") $sSqlWrk .= " WHERE " . $sWhereWrk;
+			$rswrk = Conn()->Execute($sSqlWrk);
+			if ($rswrk && !$rswrk->EOF) { // Lookup values found
+				$arwrk = array();
+				$arwrk[1] = $rswrk->fields('DispFld');
+				$this->skill_id->ViewValue = $this->skill_id->DisplayValue($arwrk);
+				$rswrk->Close();
+			} else {
+				$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+			}
+		} else {
+			$this->skill_id->ViewValue = NULL;
+		}
+		}
 		$this->skill_id->ViewCustomAttributes = "";
 
 		// facebook
@@ -2161,7 +2202,15 @@ class cinstructor_list extends cinstructor {
 		$this->gplus->ViewCustomAttributes = "";
 
 		// picture
-		$this->picture->ViewValue = $this->picture->CurrentValue;
+		$this->picture->UploadPath = "../uploads/instructor";
+		if (!ew_Empty($this->picture->Upload->DbValue)) {
+			$this->picture->ImageWidth = 0;
+			$this->picture->ImageHeight = 94;
+			$this->picture->ImageAlt = $this->picture->FldAlt();
+			$this->picture->ViewValue = $this->picture->Upload->DbValue;
+		} else {
+			$this->picture->ViewValue = "";
+		}
 		$this->picture->ViewCustomAttributes = "";
 
 		// status
@@ -2205,8 +2254,22 @@ class cinstructor_list extends cinstructor {
 
 			// picture
 			$this->picture->LinkCustomAttributes = "";
-			$this->picture->HrefValue = "";
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->HrefValue = ew_GetFileUploadUrl($this->picture, $this->picture->Upload->DbValue); // Add prefix/suffix
+				$this->picture->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->picture->HrefValue = ew_FullUrl($this->picture->HrefValue, "href");
+			} else {
+				$this->picture->HrefValue = "";
+			}
+			$this->picture->HrefValue2 = $this->picture->UploadPath . $this->picture->Upload->DbValue;
 			$this->picture->TooltipValue = "";
+			if ($this->picture->UseColorbox) {
+				if (ew_Empty($this->picture->TooltipValue))
+					$this->picture->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+				$this->picture->LinkAttrs["data-rel"] = "instructor_x" . $this->RowCnt . "_picture";
+				ew_AppendClass($this->picture->LinkAttrs["class"], "ewLightbox");
+			}
 		} elseif ($this->RowType == EW_ROWTYPE_ADD) { // Add row
 
 			// instructor_id
@@ -2244,14 +2307,26 @@ class cinstructor_list extends cinstructor {
 			// province_id
 			$this->province_id->EditAttrs["class"] = "form-control";
 			$this->province_id->EditCustomAttributes = "";
-			$this->province_id->EditValue = ew_HtmlEncode($this->province_id->CurrentValue);
-			$this->province_id->PlaceHolder = ew_RemoveHtml($this->province_id->FldCaption());
+			$this->province_id->EditValue = $this->province_id->Options(TRUE);
 
 			// picture
 			$this->picture->EditAttrs["class"] = "form-control";
 			$this->picture->EditCustomAttributes = "";
-			$this->picture->EditValue = ew_HtmlEncode($this->picture->CurrentValue);
-			$this->picture->PlaceHolder = ew_RemoveHtml($this->picture->FldCaption());
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->ImageWidth = 0;
+				$this->picture->ImageHeight = 94;
+				$this->picture->ImageAlt = $this->picture->FldAlt();
+				$this->picture->EditValue = $this->picture->Upload->DbValue;
+			} else {
+				$this->picture->EditValue = "";
+			}
+			if (!ew_Empty($this->picture->CurrentValue))
+					if ($this->RowIndex == '$rowindex$')
+						$this->picture->Upload->FileName = "";
+					else
+						$this->picture->Upload->FileName = $this->picture->CurrentValue;
+			if (is_numeric($this->RowIndex) && !$this->EventCancelled) ew_RenderUploadField($this->picture, $this->RowIndex);
 
 			// Add refer script
 			// instructor_id
@@ -2285,7 +2360,15 @@ class cinstructor_list extends cinstructor {
 
 			// picture
 			$this->picture->LinkCustomAttributes = "";
-			$this->picture->HrefValue = "";
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->HrefValue = ew_GetFileUploadUrl($this->picture, $this->picture->Upload->DbValue); // Add prefix/suffix
+				$this->picture->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->picture->HrefValue = ew_FullUrl($this->picture->HrefValue, "href");
+			} else {
+				$this->picture->HrefValue = "";
+			}
+			$this->picture->HrefValue2 = $this->picture->UploadPath . $this->picture->Upload->DbValue;
 		} elseif ($this->RowType == EW_ROWTYPE_EDIT) { // Edit row
 
 			// instructor_id
@@ -2327,14 +2410,31 @@ class cinstructor_list extends cinstructor {
 			// province_id
 			$this->province_id->EditAttrs["class"] = "form-control";
 			$this->province_id->EditCustomAttributes = "";
-			$this->province_id->EditValue = $this->province_id->CurrentValue;
+			if (strval($this->province_id->CurrentValue) <> "") {
+				$this->province_id->EditValue = $this->province_id->OptionCaption($this->province_id->CurrentValue);
+			} else {
+				$this->province_id->EditValue = NULL;
+			}
 			$this->province_id->ViewCustomAttributes = "";
 
 			// picture
 			$this->picture->EditAttrs["class"] = "form-control";
 			$this->picture->EditCustomAttributes = "";
-			$this->picture->EditValue = ew_HtmlEncode($this->picture->CurrentValue);
-			$this->picture->PlaceHolder = ew_RemoveHtml($this->picture->FldCaption());
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->ImageWidth = 0;
+				$this->picture->ImageHeight = 94;
+				$this->picture->ImageAlt = $this->picture->FldAlt();
+				$this->picture->EditValue = $this->picture->Upload->DbValue;
+			} else {
+				$this->picture->EditValue = "";
+			}
+			if (!ew_Empty($this->picture->CurrentValue))
+					if ($this->RowIndex == '$rowindex$')
+						$this->picture->Upload->FileName = "";
+					else
+						$this->picture->Upload->FileName = $this->picture->CurrentValue;
+			if (is_numeric($this->RowIndex) && !$this->EventCancelled) ew_RenderUploadField($this->picture, $this->RowIndex);
 
 			// Edit refer script
 			// instructor_id
@@ -2368,7 +2468,15 @@ class cinstructor_list extends cinstructor {
 
 			// picture
 			$this->picture->LinkCustomAttributes = "";
-			$this->picture->HrefValue = "";
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->HrefValue = ew_GetFileUploadUrl($this->picture, $this->picture->Upload->DbValue); // Add prefix/suffix
+				$this->picture->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->picture->HrefValue = ew_FullUrl($this->picture->HrefValue, "href");
+			} else {
+				$this->picture->HrefValue = "";
+			}
+			$this->picture->HrefValue2 = $this->picture->UploadPath . $this->picture->Upload->DbValue;
 		}
 		if ($this->RowType == EW_ROWTYPE_ADD || $this->RowType == EW_ROWTYPE_EDIT || $this->RowType == EW_ROWTYPE_SEARCH) // Add/Edit/Search row
 			$this->SetupFieldTitles();
@@ -2502,6 +2610,8 @@ class cinstructor_list extends cinstructor {
 			// Save old values
 			$rsold = &$rs->fields;
 			$this->LoadDbValues($rsold);
+			$this->picture->OldUploadPath = "../uploads/instructor";
+			$this->picture->UploadPath = $this->picture->OldUploadPath;
 			$rsnew = array();
 
 			// first_name
@@ -2522,7 +2632,40 @@ class cinstructor_list extends cinstructor {
 			// province_id
 			// picture
 
-			$this->picture->SetDbValueDef($rsnew, $this->picture->CurrentValue, NULL, $this->picture->ReadOnly);
+			if ($this->picture->Visible && !$this->picture->ReadOnly && !$this->picture->Upload->KeepFile) {
+				$this->picture->Upload->DbValue = $rsold['picture']; // Get original value
+				if ($this->picture->Upload->FileName == "") {
+					$rsnew['picture'] = NULL;
+				} else {
+					$rsnew['picture'] = $this->picture->Upload->FileName;
+				}
+			}
+			if ($this->picture->Visible && !$this->picture->Upload->KeepFile) {
+				$this->picture->UploadPath = "../uploads/instructor";
+				$OldFiles = ew_Empty($this->picture->Upload->DbValue) ? array() : array($this->picture->Upload->DbValue);
+				if (!ew_Empty($this->picture->Upload->FileName)) {
+					$NewFiles = array($this->picture->Upload->FileName);
+					$NewFileCount = count($NewFiles);
+					for ($i = 0; $i < $NewFileCount; $i++) {
+						$fldvar = ($this->picture->Upload->Index < 0) ? $this->picture->FldVar : substr($this->picture->FldVar, 0, 1) . $this->picture->Upload->Index . substr($this->picture->FldVar, 1);
+						if ($NewFiles[$i] <> "") {
+							$file = $NewFiles[$i];
+							if (file_exists(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file)) {
+								$file1 = ew_UploadFileNameEx($this->picture->PhysicalUploadPath(), $file); // Get new file name
+								if ($file1 <> $file) { // Rename temp file
+									while (file_exists(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file1) || file_exists($this->picture->PhysicalUploadPath() . $file1)) // Make sure no file name clash
+										$file1 = ew_UniqueFilename($this->picture->PhysicalUploadPath(), $file1, TRUE); // Use indexed name
+									rename(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file, ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file1);
+									$NewFiles[$i] = $file1;
+								}
+							}
+						}
+					}
+					$this->picture->Upload->DbValue = empty($OldFiles) ? "" : implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $OldFiles);
+					$this->picture->Upload->FileName = implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $NewFiles);
+					$this->picture->SetDbValueDef($rsnew, $this->picture->Upload->FileName, NULL, $this->picture->ReadOnly);
+				}
+			}
 
 			// Call Row Updating event
 			$bUpdateRow = $this->Row_Updating($rsold, $rsnew);
@@ -2534,6 +2677,30 @@ class cinstructor_list extends cinstructor {
 					$EditRow = TRUE; // No field to update
 				$conn->raiseErrorFn = '';
 				if ($EditRow) {
+					if ($this->picture->Visible && !$this->picture->Upload->KeepFile) {
+						$OldFiles = ew_Empty($this->picture->Upload->DbValue) ? array() : array($this->picture->Upload->DbValue);
+						if (!ew_Empty($this->picture->Upload->FileName)) {
+							$NewFiles = array($this->picture->Upload->FileName);
+							$NewFiles2 = array($rsnew['picture']);
+							$NewFileCount = count($NewFiles);
+							for ($i = 0; $i < $NewFileCount; $i++) {
+								$fldvar = ($this->picture->Upload->Index < 0) ? $this->picture->FldVar : substr($this->picture->FldVar, 0, 1) . $this->picture->Upload->Index . substr($this->picture->FldVar, 1);
+								if ($NewFiles[$i] <> "") {
+									$file = ew_UploadTempPath($fldvar, $this->picture->TblVar) . $NewFiles[$i];
+									if (file_exists($file)) {
+										if (@$NewFiles2[$i] <> "") // Use correct file name
+											$NewFiles[$i] = $NewFiles2[$i];
+										if (!$this->picture->Upload->SaveToFile($NewFiles[$i], TRUE, $i)) { // Just replace
+											$this->setFailureMessage($Language->Phrase("UploadErrMsg7"));
+											return FALSE;
+										}
+									}
+								}
+							}
+						} else {
+							$NewFiles = array();
+						}
+					}
 				}
 			} else {
 				if ($this->getSuccessMessage() <> "" || $this->getFailureMessage() <> "") {
@@ -2553,6 +2720,9 @@ class cinstructor_list extends cinstructor {
 		if ($EditRow)
 			$this->Row_Updated($rsold, $rsnew);
 		$rs->Close();
+
+		// picture
+		ew_CleanUploadTempPath($this->picture, $this->picture->Upload->Index);
 		return $EditRow;
 	}
 
@@ -2564,6 +2734,8 @@ class cinstructor_list extends cinstructor {
 		// Load db values from rsold
 		$this->LoadDbValues($rsold);
 		if ($rsold) {
+			$this->picture->OldUploadPath = "../uploads/instructor";
+			$this->picture->UploadPath = $this->picture->OldUploadPath;
 		}
 		$rsnew = array();
 
@@ -2586,7 +2758,40 @@ class cinstructor_list extends cinstructor {
 		$this->province_id->SetDbValueDef($rsnew, $this->province_id->CurrentValue, "", FALSE);
 
 		// picture
-		$this->picture->SetDbValueDef($rsnew, $this->picture->CurrentValue, NULL, FALSE);
+		if ($this->picture->Visible && !$this->picture->Upload->KeepFile) {
+			$this->picture->Upload->DbValue = ""; // No need to delete old file
+			if ($this->picture->Upload->FileName == "") {
+				$rsnew['picture'] = NULL;
+			} else {
+				$rsnew['picture'] = $this->picture->Upload->FileName;
+			}
+		}
+		if ($this->picture->Visible && !$this->picture->Upload->KeepFile) {
+			$this->picture->UploadPath = "../uploads/instructor";
+			$OldFiles = ew_Empty($this->picture->Upload->DbValue) ? array() : array($this->picture->Upload->DbValue);
+			if (!ew_Empty($this->picture->Upload->FileName)) {
+				$NewFiles = array($this->picture->Upload->FileName);
+				$NewFileCount = count($NewFiles);
+				for ($i = 0; $i < $NewFileCount; $i++) {
+					$fldvar = ($this->picture->Upload->Index < 0) ? $this->picture->FldVar : substr($this->picture->FldVar, 0, 1) . $this->picture->Upload->Index . substr($this->picture->FldVar, 1);
+					if ($NewFiles[$i] <> "") {
+						$file = $NewFiles[$i];
+						if (file_exists(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file)) {
+							$file1 = ew_UploadFileNameEx($this->picture->PhysicalUploadPath(), $file); // Get new file name
+							if ($file1 <> $file) { // Rename temp file
+								while (file_exists(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file1) || file_exists($this->picture->PhysicalUploadPath() . $file1)) // Make sure no file name clash
+									$file1 = ew_UniqueFilename($this->picture->PhysicalUploadPath(), $file1, TRUE); // Use indexed name
+								rename(ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file, ew_UploadTempPath($fldvar, $this->picture->TblVar) . $file1);
+								$NewFiles[$i] = $file1;
+							}
+						}
+					}
+				}
+				$this->picture->Upload->DbValue = empty($OldFiles) ? "" : implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $OldFiles);
+				$this->picture->Upload->FileName = implode(EW_MULTIPLE_UPLOAD_SEPARATOR, $NewFiles);
+				$this->picture->SetDbValueDef($rsnew, $this->picture->Upload->FileName, NULL, FALSE);
+			}
+		}
 
 		// Call Row Inserting event
 		$rs = ($rsold == NULL) ? NULL : $rsold->fields;
@@ -2608,6 +2813,30 @@ class cinstructor_list extends cinstructor {
 			$AddRow = $this->Insert($rsnew);
 			$conn->raiseErrorFn = '';
 			if ($AddRow) {
+				if ($this->picture->Visible && !$this->picture->Upload->KeepFile) {
+					$OldFiles = ew_Empty($this->picture->Upload->DbValue) ? array() : array($this->picture->Upload->DbValue);
+					if (!ew_Empty($this->picture->Upload->FileName)) {
+						$NewFiles = array($this->picture->Upload->FileName);
+						$NewFiles2 = array($rsnew['picture']);
+						$NewFileCount = count($NewFiles);
+						for ($i = 0; $i < $NewFileCount; $i++) {
+							$fldvar = ($this->picture->Upload->Index < 0) ? $this->picture->FldVar : substr($this->picture->FldVar, 0, 1) . $this->picture->Upload->Index . substr($this->picture->FldVar, 1);
+							if ($NewFiles[$i] <> "") {
+								$file = ew_UploadTempPath($fldvar, $this->picture->TblVar) . $NewFiles[$i];
+								if (file_exists($file)) {
+									if (@$NewFiles2[$i] <> "") // Use correct file name
+										$NewFiles[$i] = $NewFiles2[$i];
+									if (!$this->picture->Upload->SaveToFile($NewFiles[$i], TRUE, $i)) { // Just replace
+										$this->setFailureMessage($Language->Phrase("UploadErrMsg7"));
+										return FALSE;
+									}
+								}
+							}
+						}
+					} else {
+						$NewFiles = array();
+					}
+				}
 			}
 		} else {
 			if ($this->getSuccessMessage() <> "" || $this->getFailureMessage() <> "") {
@@ -2627,6 +2856,9 @@ class cinstructor_list extends cinstructor {
 			$rs = ($rsold == NULL) ? NULL : $rsold->fields;
 			$this->Row_Inserted($rs, $rsnew);
 		}
+
+		// picture
+		ew_CleanUploadTempPath($this->picture, $this->picture->Upload->Index);
 		return $AddRow;
 	}
 
@@ -3114,8 +3346,10 @@ finstructorlist.Form_CustomValidate =
 finstructorlist.ValidateRequired = <?php echo json_encode(EW_CLIENT_VALIDATE) ?>;
 
 // Dynamic selection lists
-// Form object for search
+finstructorlist.Lists["x_province_id"] = {"LinkField":"","Ajax":null,"AutoFill":false,"DisplayFields":["","","",""],"ParentFields":[],"ChildFields":[],"FilterFields":[],"Options":[],"Template":""};
+finstructorlist.Lists["x_province_id"].Options = <?php echo json_encode($instructor_list->province_id->Options()) ?>;
 
+// Form object for search
 var CurrentSearchForm = finstructorlistsrch = new ew_Form("finstructorlistsrch");
 </script>
 <script type="text/javascript">
@@ -3338,7 +3572,7 @@ $instructor_list->ListOptions->Render("header", "left");
 		<th data-name="province_id" class="<?php echo $instructor->province_id->HeaderCellClass() ?>"><div id="elh_instructor_province_id" class="instructor_province_id"><div class="ewTableHeaderCaption"><?php echo $instructor->province_id->FldCaption() ?></div></div></th>
 	<?php } else { ?>
 		<th data-name="province_id" class="<?php echo $instructor->province_id->HeaderCellClass() ?>"><div class="ewPointer" onclick="ew_Sort(event,'<?php echo $instructor->SortUrl($instructor->province_id) ?>',1);"><div id="elh_instructor_province_id" class="instructor_province_id">
-			<div class="ewTableHeaderBtn"><span class="ewTableHeaderCaption"><?php echo $instructor->province_id->FldCaption() ?><?php echo $Language->Phrase("SrchLegend") ?></span><span class="ewTableHeaderSort"><?php if ($instructor->province_id->getSort() == "ASC") { ?><span class="caret ewSortUp"></span><?php } elseif ($instructor->province_id->getSort() == "DESC") { ?><span class="caret"></span><?php } ?></span></div>
+			<div class="ewTableHeaderBtn"><span class="ewTableHeaderCaption"><?php echo $instructor->province_id->FldCaption() ?></span><span class="ewTableHeaderSort"><?php if ($instructor->province_id->getSort() == "ASC") { ?><span class="caret ewSortUp"></span><?php } elseif ($instructor->province_id->getSort() == "DESC") { ?><span class="caret"></span><?php } ?></span></div>
 		</div></div></th>
 	<?php } ?>
 <?php } ?>
@@ -3590,7 +3824,9 @@ $instructor_list->ListOptions->Render("body", "left", $instructor_list->RowCnt);
 		<td data-name="province_id"<?php echo $instructor->province_id->CellAttributes() ?>>
 <?php if ($instructor->RowType == EW_ROWTYPE_ADD) { // Add record ?>
 <span id="el<?php echo $instructor_list->RowCnt ?>_instructor_province_id" class="form-group instructor_province_id">
-<input type="text" data-table="instructor" data-field="x_province_id" name="x<?php echo $instructor_list->RowIndex ?>_province_id" id="x<?php echo $instructor_list->RowIndex ?>_province_id" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($instructor->province_id->getPlaceHolder()) ?>" value="<?php echo $instructor->province_id->EditValue ?>"<?php echo $instructor->province_id->EditAttributes() ?>>
+<select data-table="instructor" data-field="x_province_id" data-value-separator="<?php echo $instructor->province_id->DisplayValueSeparatorAttribute() ?>" id="x<?php echo $instructor_list->RowIndex ?>_province_id" name="x<?php echo $instructor_list->RowIndex ?>_province_id"<?php echo $instructor->province_id->EditAttributes() ?>>
+<?php echo $instructor->province_id->SelectOptionListHtml("x<?php echo $instructor_list->RowIndex ?>_province_id") ?>
+</select>
 </span>
 <input type="hidden" data-table="instructor" data-field="x_province_id" name="o<?php echo $instructor_list->RowIndex ?>_province_id" id="o<?php echo $instructor_list->RowIndex ?>_province_id" value="<?php echo ew_HtmlEncode($instructor->province_id->OldValue) ?>">
 <?php } ?>
@@ -3613,19 +3849,46 @@ $instructor_list->ListOptions->Render("body", "left", $instructor_list->RowCnt);
 		<td data-name="picture"<?php echo $instructor->picture->CellAttributes() ?>>
 <?php if ($instructor->RowType == EW_ROWTYPE_ADD) { // Add record ?>
 <span id="el<?php echo $instructor_list->RowCnt ?>_instructor_picture" class="form-group instructor_picture">
-<input type="text" data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($instructor->picture->getPlaceHolder()) ?>" value="<?php echo $instructor->picture->EditValue ?>"<?php echo $instructor->picture->EditAttributes() ?>>
+<div id="fd_x<?php echo $instructor_list->RowIndex ?>_picture">
+<span title="<?php echo $instructor->picture->FldTitle() ? $instructor->picture->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($instructor->picture->ReadOnly || $instructor->picture->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture"<?php echo $instructor->picture->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fn_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->Upload->FileName ?>">
+<input type="hidden" name="fa_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fa_x<?php echo $instructor_list->RowIndex ?>_picture" value="0">
+<input type="hidden" name="fs_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fs_x<?php echo $instructor_list->RowIndex ?>_picture" value="250">
+<input type="hidden" name="fx_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fx_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fm_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $instructor_list->RowIndex ?>_picture" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <input type="hidden" data-table="instructor" data-field="x_picture" name="o<?php echo $instructor_list->RowIndex ?>_picture" id="o<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo ew_HtmlEncode($instructor->picture->OldValue) ?>">
 <?php } ?>
 <?php if ($instructor->RowType == EW_ROWTYPE_EDIT) { // Edit record ?>
 <span id="el<?php echo $instructor_list->RowCnt ?>_instructor_picture" class="form-group instructor_picture">
-<input type="text" data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($instructor->picture->getPlaceHolder()) ?>" value="<?php echo $instructor->picture->EditValue ?>"<?php echo $instructor->picture->EditAttributes() ?>>
+<div id="fd_x<?php echo $instructor_list->RowIndex ?>_picture">
+<span title="<?php echo $instructor->picture->FldTitle() ? $instructor->picture->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($instructor->picture->ReadOnly || $instructor->picture->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture"<?php echo $instructor->picture->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fn_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->Upload->FileName ?>">
+<?php if (@$_POST["fa_x<?php echo $instructor_list->RowIndex ?>_picture"] == "0") { ?>
+<input type="hidden" name="fa_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fa_x<?php echo $instructor_list->RowIndex ?>_picture" value="0">
+<?php } else { ?>
+<input type="hidden" name="fa_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fa_x<?php echo $instructor_list->RowIndex ?>_picture" value="1">
+<?php } ?>
+<input type="hidden" name="fs_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fs_x<?php echo $instructor_list->RowIndex ?>_picture" value="250">
+<input type="hidden" name="fx_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fx_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fm_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $instructor_list->RowIndex ?>_picture" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <?php } ?>
 <?php if ($instructor->RowType == EW_ROWTYPE_VIEW) { // View record ?>
 <span id="el<?php echo $instructor_list->RowCnt ?>_instructor_picture" class="instructor_picture">
-<span<?php echo $instructor->picture->ViewAttributes() ?>>
-<?php echo $instructor->picture->ListViewValue() ?></span>
+<span>
+<?php echo ew_GetFileViewTag($instructor->picture, $instructor->picture->ListViewValue()) ?>
+</span>
 </span>
 <?php } ?>
 </td>
@@ -3720,7 +3983,9 @@ $instructor_list->ListOptions->Render("body", "left", $instructor_list->RowIndex
 	<?php if ($instructor->province_id->Visible) { // province_id ?>
 		<td data-name="province_id">
 <span id="el$rowindex$_instructor_province_id" class="form-group instructor_province_id">
-<input type="text" data-table="instructor" data-field="x_province_id" name="x<?php echo $instructor_list->RowIndex ?>_province_id" id="x<?php echo $instructor_list->RowIndex ?>_province_id" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($instructor->province_id->getPlaceHolder()) ?>" value="<?php echo $instructor->province_id->EditValue ?>"<?php echo $instructor->province_id->EditAttributes() ?>>
+<select data-table="instructor" data-field="x_province_id" data-value-separator="<?php echo $instructor->province_id->DisplayValueSeparatorAttribute() ?>" id="x<?php echo $instructor_list->RowIndex ?>_province_id" name="x<?php echo $instructor_list->RowIndex ?>_province_id"<?php echo $instructor->province_id->EditAttributes() ?>>
+<?php echo $instructor->province_id->SelectOptionListHtml("x<?php echo $instructor_list->RowIndex ?>_province_id") ?>
+</select>
 </span>
 <input type="hidden" data-table="instructor" data-field="x_province_id" name="o<?php echo $instructor_list->RowIndex ?>_province_id" id="o<?php echo $instructor_list->RowIndex ?>_province_id" value="<?php echo ew_HtmlEncode($instructor->province_id->OldValue) ?>">
 </td>
@@ -3728,7 +3993,18 @@ $instructor_list->ListOptions->Render("body", "left", $instructor_list->RowIndex
 	<?php if ($instructor->picture->Visible) { // picture ?>
 		<td data-name="picture">
 <span id="el$rowindex$_instructor_picture" class="form-group instructor_picture">
-<input type="text" data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture" size="30" maxlength="250" placeholder="<?php echo ew_HtmlEncode($instructor->picture->getPlaceHolder()) ?>" value="<?php echo $instructor->picture->EditValue ?>"<?php echo $instructor->picture->EditAttributes() ?>>
+<div id="fd_x<?php echo $instructor_list->RowIndex ?>_picture">
+<span title="<?php echo $instructor->picture->FldTitle() ? $instructor->picture->FldTitle() : $Language->Phrase("ChooseFile") ?>" class="btn btn-default btn-sm fileinput-button ewTooltip<?php if ($instructor->picture->ReadOnly || $instructor->picture->Disabled) echo " hide"; ?>" data-trigger="hover">
+	<span><?php echo $Language->Phrase("ChooseFileBtn") ?></span>
+	<input type="file" title=" " data-table="instructor" data-field="x_picture" name="x<?php echo $instructor_list->RowIndex ?>_picture" id="x<?php echo $instructor_list->RowIndex ?>_picture"<?php echo $instructor->picture->EditAttributes() ?>>
+</span>
+<input type="hidden" name="fn_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fn_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->Upload->FileName ?>">
+<input type="hidden" name="fa_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fa_x<?php echo $instructor_list->RowIndex ?>_picture" value="0">
+<input type="hidden" name="fs_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fs_x<?php echo $instructor_list->RowIndex ?>_picture" value="250">
+<input type="hidden" name="fx_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fx_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x<?php echo $instructor_list->RowIndex ?>_picture" id= "fm_x<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo $instructor->picture->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x<?php echo $instructor_list->RowIndex ?>_picture" class="table table-condensed pull-left ewUploadTable"><tbody class="files"></tbody></table>
 </span>
 <input type="hidden" data-table="instructor" data-field="x_picture" name="o<?php echo $instructor_list->RowIndex ?>_picture" id="o<?php echo $instructor_list->RowIndex ?>_picture" value="<?php echo ew_HtmlEncode($instructor->picture->OldValue) ?>">
 </td>

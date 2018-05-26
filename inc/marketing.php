@@ -1,5 +1,13 @@
 <div class="row">
-  <div class="col-lg-4 mb-4">
+
+<?php 
+  $sql_query="SELECT * FROM marketing";
+  $objSlide->getMarketing($sql_query);
+
+?>
+
+  
+  <!-- <div class="col-lg-4 mb-4">
     <div class="card h-100">
       <h4 class="card-header">ដាក់ពាក្យ​ចូល​រៀន​</h4>
       <div class="card-body">
@@ -10,6 +18,7 @@
       </div>
     </div>
   </div>
+
   <div class="col-lg-4 mb-4">
     <div class="card h-100">
       <h4 class="card-header">បណ្តុះ​បណ្តាល​</h4>
@@ -21,6 +30,8 @@
       </div>
     </div>
   </div>
+
+
   <div class="col-lg-4 mb-4">
     <div class="card h-100">
       <h4 class="card-header">ទទួល​ស្កាល់​</h4>
@@ -32,4 +43,7 @@
       </div>
     </div>
   </div>
+ -->
+
+
 </div>

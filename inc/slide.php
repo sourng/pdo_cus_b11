@@ -7,8 +7,7 @@
         </ol>
         <div class="carousel-inner" role="listbox">
           <!-- Slide One - Set the background image for this slide in the line below -->
-          <div class="carousel-item active" style="background-image: url('./uploads/slide/image1.jpg')">
-           
+          <div class="carousel-item active" style="background-image: url('./uploads/slide/image1.jpg')">         
           </div>
           <!-- Slide Two - Set the background image for this slide in the line below -->
           <div class="carousel-item" style="background-image: url('./uploads/slide/image2.jpg')">

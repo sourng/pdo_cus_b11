@@ -63,7 +63,7 @@ class cslide extends cTable {
 		$this->fields['description'] = &$this->description;
 
 		// img
-		$this->img = new cField('slide', 'slide', 'x_img', 'img', '`img`', '`img`', 200, -1, FALSE, '`img`', FALSE, FALSE, FALSE, 'FORMATTED TEXT', 'TEXT');
+		$this->img = new cField('slide', 'slide', 'x_img', 'img', '`img`', '`img`', 200, -1, TRUE, '`img`', FALSE, FALSE, FALSE, 'IMAGE', 'FILE');
 		$this->img->Sortable = TRUE; // Allow sort
 		$this->fields['img'] = &$this->img;
 
@@ -607,7 +607,7 @@ class cslide extends cTable {
 		$this->slide_id->setDbValue($rs->fields('slide_id'));
 		$this->title->setDbValue($rs->fields('title'));
 		$this->description->setDbValue($rs->fields('description'));
-		$this->img->setDbValue($rs->fields('img'));
+		$this->img->Upload->DbValue = $rs->fields('img');
 		$this->status->setDbValue($rs->fields('status'));
 		$this->url->setDbValue($rs->fields('url'));
 	}
@@ -640,7 +640,15 @@ class cslide extends cTable {
 		$this->description->ViewCustomAttributes = "";
 
 		// img
-		$this->img->ViewValue = $this->img->CurrentValue;
+		$this->img->UploadPath = "../uploads/slide";
+		if (!ew_Empty($this->img->Upload->DbValue)) {
+			$this->img->ImageWidth = 0;
+			$this->img->ImageHeight = 94;
+			$this->img->ImageAlt = $this->img->FldAlt();
+			$this->img->ViewValue = $this->img->Upload->DbValue;
+		} else {
+			$this->img->ViewValue = "";
+		}
 		$this->img->ViewCustomAttributes = "";
 
 		// status
@@ -668,8 +676,22 @@ class cslide extends cTable {
 
 		// img
 		$this->img->LinkCustomAttributes = "";
-		$this->img->HrefValue = "";
+		$this->img->UploadPath = "../uploads/slide";
+		if (!ew_Empty($this->img->Upload->DbValue)) {
+			$this->img->HrefValue = ew_GetFileUploadUrl($this->img, $this->img->Upload->DbValue); // Add prefix/suffix
+			$this->img->LinkAttrs["target"] = ""; // Add target
+			if ($this->Export <> "") $this->img->HrefValue = ew_FullUrl($this->img->HrefValue, "href");
+		} else {
+			$this->img->HrefValue = "";
+		}
+		$this->img->HrefValue2 = $this->img->UploadPath . $this->img->Upload->DbValue;
 		$this->img->TooltipValue = "";
+		if ($this->img->UseColorbox) {
+			if (ew_Empty($this->img->TooltipValue))
+				$this->img->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+			$this->img->LinkAttrs["data-rel"] = "slide_x_img";
+			ew_AppendClass($this->img->LinkAttrs["class"], "ewLightbox");
+		}
 
 		// status
 		$this->status->LinkCustomAttributes = "";
@@ -716,8 +738,17 @@ class cslide extends cTable {
 		// img
 		$this->img->EditAttrs["class"] = "form-control";
 		$this->img->EditCustomAttributes = "";
-		$this->img->EditValue = $this->img->CurrentValue;
-		$this->img->PlaceHolder = ew_RemoveHtml($this->img->FldCaption());
+		$this->img->UploadPath = "../uploads/slide";
+		if (!ew_Empty($this->img->Upload->DbValue)) {
+			$this->img->ImageWidth = 0;
+			$this->img->ImageHeight = 94;
+			$this->img->ImageAlt = $this->img->FldAlt();
+			$this->img->EditValue = $this->img->Upload->DbValue;
+		} else {
+			$this->img->EditValue = "";
+		}
+		if (!ew_Empty($this->img->CurrentValue))
+				$this->img->Upload->FileName = $this->img->CurrentValue;
 
 		// status
 		$this->status->EditAttrs["class"] = "form-control";

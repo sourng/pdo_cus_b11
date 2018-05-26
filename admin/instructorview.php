@@ -738,7 +738,7 @@ class cinstructor_view extends cinstructor {
 		if ($this->UseSelectLimit) {
 			$conn->raiseErrorFn = $GLOBALS["EW_ERROR_FN"];
 			if ($dbtype == "MSSQL") {
-				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset, array("_hasOrderBy" => trim($this->getOrderBy()) || trim($this->getSessionOrderBy())));
+				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset, array("_hasOrderBy" => trim($this->getOrderBy()) || trim($this->getSessionOrderByList())));
 			} else {
 				$rs = $conn->SelectLimit($sSql, $rowcnt, $offset);
 			}
@@ -793,11 +793,17 @@ class cinstructor_view extends cinstructor {
 		$this->address->setDbValue($row['address']);
 		$this->province_id->setDbValue($row['province_id']);
 		$this->skill_id->setDbValue($row['skill_id']);
+		if (array_key_exists('EV__skill_id', $rs->fields)) {
+			$this->skill_id->VirtualValue = $rs->fields('EV__skill_id'); // Set up virtual field value
+		} else {
+			$this->skill_id->VirtualValue = ""; // Clear value
+		}
 		$this->facebook->setDbValue($row['facebook']);
 		$this->twitter->setDbValue($row['twitter']);
 		$this->gplus->setDbValue($row['gplus']);
 		$this->detail->setDbValue($row['detail']);
-		$this->picture->setDbValue($row['picture']);
+		$this->picture->Upload->DbValue = $row['picture'];
+		$this->picture->setDbValue($this->picture->Upload->DbValue);
 		$this->status->setDbValue($row['status']);
 	}
 
@@ -838,7 +844,7 @@ class cinstructor_view extends cinstructor {
 		$this->twitter->DbValue = $row['twitter'];
 		$this->gplus->DbValue = $row['gplus'];
 		$this->detail->DbValue = $row['detail'];
-		$this->picture->DbValue = $row['picture'];
+		$this->picture->Upload->DbValue = $row['picture'];
 		$this->status->DbValue = $row['status'];
 	}
 
@@ -900,11 +906,38 @@ class cinstructor_view extends cinstructor {
 		$this->address->ViewCustomAttributes = "";
 
 		// province_id
-		$this->province_id->ViewValue = $this->province_id->CurrentValue;
+		if (strval($this->province_id->CurrentValue) <> "") {
+			$this->province_id->ViewValue = $this->province_id->OptionCaption($this->province_id->CurrentValue);
+		} else {
+			$this->province_id->ViewValue = NULL;
+		}
 		$this->province_id->ViewCustomAttributes = "";
 
 		// skill_id
-		$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+		if ($this->skill_id->VirtualValue <> "") {
+			$this->skill_id->ViewValue = $this->skill_id->VirtualValue;
+		} else {
+		if (strval($this->skill_id->CurrentValue) <> "") {
+			$sFilterWrk = "`skill_id`" . ew_SearchString("=", $this->skill_id->CurrentValue, EW_DATATYPE_NUMBER, "");
+		$sSqlWrk = "SELECT DISTINCT `skill_id`, `skill_title` AS `DispFld`, '' AS `Disp2Fld`, '' AS `Disp3Fld`, '' AS `Disp4Fld` FROM `skill`";
+		$sWhereWrk = "";
+		$this->skill_id->LookupFilters = array("dx1" => '`skill_title`');
+		ew_AddFilter($sWhereWrk, $sFilterWrk);
+		$this->Lookup_Selecting($this->skill_id, $sWhereWrk); // Call Lookup Selecting
+		if ($sWhereWrk <> "") $sSqlWrk .= " WHERE " . $sWhereWrk;
+			$rswrk = Conn()->Execute($sSqlWrk);
+			if ($rswrk && !$rswrk->EOF) { // Lookup values found
+				$arwrk = array();
+				$arwrk[1] = $rswrk->fields('DispFld');
+				$this->skill_id->ViewValue = $this->skill_id->DisplayValue($arwrk);
+				$rswrk->Close();
+			} else {
+				$this->skill_id->ViewValue = $this->skill_id->CurrentValue;
+			}
+		} else {
+			$this->skill_id->ViewValue = NULL;
+		}
+		}
 		$this->skill_id->ViewCustomAttributes = "";
 
 		// facebook
@@ -924,7 +957,15 @@ class cinstructor_view extends cinstructor {
 		$this->detail->ViewCustomAttributes = "";
 
 		// picture
-		$this->picture->ViewValue = $this->picture->CurrentValue;
+		$this->picture->UploadPath = "../uploads/instructor";
+		if (!ew_Empty($this->picture->Upload->DbValue)) {
+			$this->picture->ImageWidth = 0;
+			$this->picture->ImageHeight = 94;
+			$this->picture->ImageAlt = $this->picture->FldAlt();
+			$this->picture->ViewValue = $this->picture->Upload->DbValue;
+		} else {
+			$this->picture->ViewValue = "";
+		}
 		$this->picture->ViewCustomAttributes = "";
 
 		// status
@@ -993,8 +1034,22 @@ class cinstructor_view extends cinstructor {
 
 			// picture
 			$this->picture->LinkCustomAttributes = "";
-			$this->picture->HrefValue = "";
+			$this->picture->UploadPath = "../uploads/instructor";
+			if (!ew_Empty($this->picture->Upload->DbValue)) {
+				$this->picture->HrefValue = ew_GetFileUploadUrl($this->picture, $this->picture->Upload->DbValue); // Add prefix/suffix
+				$this->picture->LinkAttrs["target"] = ""; // Add target
+				if ($this->Export <> "") $this->picture->HrefValue = ew_FullUrl($this->picture->HrefValue, "href");
+			} else {
+				$this->picture->HrefValue = "";
+			}
+			$this->picture->HrefValue2 = $this->picture->UploadPath . $this->picture->Upload->DbValue;
 			$this->picture->TooltipValue = "";
+			if ($this->picture->UseColorbox) {
+				if (ew_Empty($this->picture->TooltipValue))
+					$this->picture->LinkAttrs["title"] = $Language->Phrase("ViewImageGallery");
+				$this->picture->LinkAttrs["data-rel"] = "instructor_x_picture";
+				ew_AppendClass($this->picture->LinkAttrs["class"], "ewLightbox");
+			}
 
 			// status
 			$this->status->LinkCustomAttributes = "";
@@ -1396,8 +1451,12 @@ finstructorview.Form_CustomValidate =
 finstructorview.ValidateRequired = <?php echo json_encode(EW_CLIENT_VALIDATE) ?>;
 
 // Dynamic selection lists
-// Form object for search
+finstructorview.Lists["x_province_id"] = {"LinkField":"","Ajax":null,"AutoFill":false,"DisplayFields":["","","",""],"ParentFields":[],"ChildFields":[],"FilterFields":[],"Options":[],"Template":""};
+finstructorview.Lists["x_province_id"].Options = <?php echo json_encode($instructor_view->province_id->Options()) ?>;
+finstructorview.Lists["x_skill_id"] = {"LinkField":"x_skill_id","Ajax":true,"AutoFill":false,"DisplayFields":["x_skill_title","","",""],"ParentFields":[],"ChildFields":[],"FilterFields":[],"Options":[],"Template":"","LinkTable":"skill"};
+finstructorview.Lists["x_skill_id"].Data = "<?php echo $instructor_view->skill_id->LookupFilterQuery(FALSE, "view") ?>";
 
+// Form object for search
 </script>
 <script type="text/javascript">
 
@@ -1609,8 +1668,9 @@ $instructor_view->ShowMessage();
 		<td class="col-sm-2"><span id="elh_instructor_picture"><?php echo $instructor->picture->FldCaption() ?></span></td>
 		<td data-name="picture"<?php echo $instructor->picture->CellAttributes() ?>>
 <span id="el_instructor_picture">
-<span<?php echo $instructor->picture->ViewAttributes() ?>>
-<?php echo $instructor->picture->ViewValue ?></span>
+<span>
+<?php echo ew_GetFileViewTag($instructor->picture, $instructor->picture->ViewValue) ?>
+</span>
 </span>
 </td>
 	</tr>

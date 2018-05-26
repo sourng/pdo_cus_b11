@@ -1,3 +1,10 @@
+<?php 
+ include_once('./db/dbconf.php');
+  include_once('./class/class.crud.php');
+  $crud=new Crud($DB_con);
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -35,33 +42,9 @@
       </ol>
 
         <?php 
-          for($i=1;$i<4;$i++){
-            ?>
-              <!-- Blog Post -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="row">
-            <div class="col-lg-6">
-              <a href="post.php?id=1">
-                <img class="img-fluid rounded" src="uploads/img/php.jpg" alt="">
-              </a>
-            </div>
-            <div class="col-lg-6">
-              <h2 class="card-title">ចំណង​ជើង​ពត៌មាន​របស់​យើង <?php echo $i; ?></h2>
-              <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Reiciendis aliquid atque, nulla? Quos cum ex quis soluta, a laboriosam. Dicta expedita corporis animi vero voluptate voluptatibus possimus, veniam magni quis!</p>
-              <a href="post.php?id=1" class="btn btn-primary">Read More &rarr;</a>
-            </div>
-          </div>
-        </div>
-        <div class="card-footer text-muted">
-          Posted on January 1, 2018 by
-          <a href="#">SENG Sourng</a>
-        </div>
-      </div>
-
-
-            <?php
-          }
+          $sql="SELECT b.*,u.last_name FROM blog as b INNER JOIN users as u
+ON b.user_id=u.id";
+          $crud->getBlog($sql);
 
         ?>
     
