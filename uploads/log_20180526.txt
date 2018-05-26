@@ -1,0 +1,2 @@
+date/time	script	user	action	table	field	key value	old value	new value
+2018/05/26 09:08:38	/pdo/pdo_cus_b11.com/admin/login.php	admin	login	::1				
