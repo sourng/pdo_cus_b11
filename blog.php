@@ -44,19 +44,18 @@
         <?php 
           $sql="SELECT b.*,u.last_name FROM blog as b INNER JOIN users as u
 ON b.user_id=u.id";
-          $crud->getBlog($sql);
+
+        $records_per_page=3;
+        $newquery = $crud->paging($sql,$records_per_page);
+        $crud->getBlog($newquery);
+         // $crud->getBlog($sql);
 
         ?>
     
 
-      <!-- Pagination -->
+     <!-- Pagination -->
       <ul class="pagination justify-content-center mb-4">
-        <li class="page-item">
-          <a class="page-link" href="#">&larr; Older</a>
-        </li>
-        <li class="page-item disabled">
-          <a class="page-link" href="#">Newer &rarr;</a>
-        </li>
+        <?php $crud->paginglink($sql,$records_per_page); ?>
       </ul>
 
     </div>
