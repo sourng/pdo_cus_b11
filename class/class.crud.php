@@ -23,6 +23,27 @@
 	}
 
 
+	// Function for get Slide Data
+ 	public function getSlide($SQL_Query){
+
+ 		$stmt=$this->db->prepare($SQL_Query);
+ 		$stmt->execute();
+
+ 		if($stmt->rowCount()>0){
+ 			
+ 			while($row=$stmt->fetch(PDO::FETCH_ASSOC)){	
+ 				?>
+		<li><img src="uploads/slide/<?php  print($row['img']); ?>" alt="<?php  print($row['img']); ?>" title="<?php print($row['title']); ?>" id="<?php  print($row['id']); ?>"/></li>
+		<?php
+ 			}
+ 		}else{
+ 			echo "Nothing";
+ 		}
+
+ 	} // End Function getSlide
+
+
+
 // Function for get GetBlog
  	public function getBlog($SQL_Query){
 
