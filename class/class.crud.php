@@ -22,6 +22,15 @@
 		return $editRow;
 	}
 
+// Get each Page
+ 	public function getPages($page_id)
+	{
+		$stmt = $this->db->prepare("SELECT * FROM page WHERE page_id=:page_id");
+		$stmt->execute(array(":page_id"=>$page_id));
+		$getPage=$stmt->fetch(PDO::FETCH_ASSOC);
+		return $getPage;
+	}
+
 
 	// Function for get Slide Data
  	public function getSlide($SQL_Query){
@@ -29,11 +38,11 @@
  		$stmt=$this->db->prepare($SQL_Query);
  		$stmt->execute();
 
- 		if($stmt->rowCount()>0){
- 			
+ 		if($stmt->rowCount()>0){ 			
  			while($row=$stmt->fetch(PDO::FETCH_ASSOC)){	
  				?>
-		<li><img src="uploads/slide/<?php  print($row['img']); ?>" alt="<?php  print($row['img']); ?>" title="<?php print($row['title']); ?>" id="<?php  print($row['id']); ?>"/></li>
+		<li><img src="uploads/slide/<?php  print($row['img']); ?>" alt="<?php  print($row['img']); ?>" title="<?php print($row['title']); ?>" id="<?php  print($row['id']); ?>"/>
+		</li>
 		<?php
  			}
  		}else{
@@ -42,6 +51,46 @@
 
  	} // End Function getSlide
 
+
+// Function for getTeam
+ 	public function getTeam($SQL_Query){
+
+ 		$stmt=$this->db->prepare($SQL_Query);
+ 		$stmt->execute();
+
+ 		if($stmt->rowCount()>0){ 			
+ 			while($row=$stmt->fetch(PDO::FETCH_ASSOC)){	
+ 				
+ 				?>
+		<div class="col-lg-4 mb-4">
+          <div class="card h-100 text-center">
+            <img style="border-radius: 50%;" class="card-img-top" src="./uploads/team/<?php  print($row['image']); ?>" alt="">
+            <div class="card-body">
+              <h4 class="card-title"><?php  print($row['name']); ?></h4>
+              <h6 class="card-subtitle mb-2 text-muted">
+              	<?php  print($row['position']); ?>             		
+              	</h6>
+              	<h6 class="card-subtitle mb-2 text-muted">
+              	<?php  print($row['phone']); ?>             		
+              	</h6>
+              <p class="card-text"><?php  print($row['description']); ?></p>
+            </div>
+            <div class="card-footer">
+              <a href="<?php  print($row['fb']); ?>">FB</a>
+              <a href="<?php  print($row['tw']); ?>">TW</a>
+              <a href="<?php  print($row['gp']); ?>">GP</a>
+            </div>
+          </div>
+        </div>
+
+	
+		<?php
+ 			}
+ 		}else{
+ 			echo "Nothing";
+ 		}
+
+ 	} // End Function getTeam
 
 
 // Function for get GetBlog

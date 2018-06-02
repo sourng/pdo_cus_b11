@@ -1,3 +1,26 @@
+<?php 
+  include_once('./db/dbconf.php');
+  include_once('./class/class.slide.php');
+  include_once('./class/class.course.php');
+  include_once('./class/class.crud.php');
+
+
+  // Create Object
+    $objSlide=new slide($DB_con);
+    $objCourse=new Course($DB_con);
+    $crud=new Crud($DB_con);
+
+// Create Object
+// $crud=new Crud($DB_con);
+
+// if(isset($_GET['id']))
+//   {
+//     $id = $_GET['id'];
+//     extract($crud->getPages($id)); 
+//   }
+extract($crud->getPages(3));
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -8,7 +31,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Services|CUS Projects</title>
+    <title><?php echo $title; ?></title>
 
     <?php include_once('inc/script.php');  ?>
 
@@ -23,56 +46,25 @@
     <div class="container">
 
       <!-- Page Heading/Breadcrumbs -->
-      <h1 class="mt-4 mb-3">Services
+      <h1 class="mt-4 mb-3"><?php echo $title; ?>
         <!-- <small>Subheading</small> -->
       </h1>
 
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
-          <a href="index.html">Home</a>
+          <a href="index.php">Home</a>
         </li>
-        <li class="breadcrumb-item active">Services</li>
+        <li class="breadcrumb-item active"><?php echo $title; ?></li>
       </ol>
 
       <!-- Image Header -->
-      <img class="img-fluid rounded mb-4" src="uploads/img/11.jpg" alt="">
+      <img class="img-fluid rounded mb-4" src="uploads/img/<?php echo $image; ?>" alt="">
 
-      <!-- Marketing Icons Section -->
-      <div class="row">
-        <div class="col-lg-4 mb-4">
-          <div class="card h-100">
-            <h4 class="card-header">Card Title</h4>
-            <div class="card-body">
-              <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Sapiente esse necessitatibus neque.</p>
-            </div>
-            <div class="card-footer">
-              <a href="#" class="btn btn-primary">Learn More</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-4 mb-4">
-          <div class="card h-100">
-            <h4 class="card-header">Card Title</h4>
-            <div class="card-body">
-              <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Reiciendis ipsam eos, nam perspiciatis natus commodi similique totam consectetur praesentium molestiae atque exercitationem ut consequuntur, sed eveniet, magni nostrum sint fuga.</p>
-            </div>
-            <div class="card-footer">
-              <a href="#" class="btn btn-primary">Learn More</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-4 mb-4">
-          <div class="card h-100">
-            <h4 class="card-header">Card Title</h4>
-            <div class="card-body">
-              <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Sapiente esse necessitatibus neque.</p>
-            </div>
-            <div class="card-footer">
-              <a href="#" class="btn btn-primary">Learn More</a>
-            </div>
-          </div>
-        </div>
-      </div>
+    
+  <?php 
+    include_once('inc/marketing.php');
+
+  ?>
       <!-- /.row -->
 
     </div>

@@ -1,3 +1,19 @@
+<?php 
+include_once('db/dbconf.php');
+include_once('class/class.crud.php');
+
+// Create Object
+$crud=new Crud($DB_con);
+
+// if(isset($_GET['id']))
+//   {
+//     $id = $_GET['id'];
+//     extract($crud->getPages($id)); 
+//   }
+extract($crud->getPages(5));
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -8,7 +24,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Contact | CUS Project</title>
+    <title><?php echo $title;?> | CUS Project</title>
 
    <?php include_once('inc/script.php');  ?>
   </head>
@@ -22,7 +38,7 @@
     <div class="container">
 
       <!-- Page Heading/Breadcrumbs -->
-      <h1 class="mt-4 mb-3">Contact
+      <h1 class="mt-4 mb-3"><?php echo $title;?>
         <!-- <small>Subheading</small> -->
       </h1>
 
@@ -30,7 +46,7 @@
         <li class="breadcrumb-item">
           <a href="index.html">Home</a>
         </li>
-        <li class="breadcrumb-item active">Contact</li>
+        <li class="breadcrumb-item active"><?php echo $title;?></li>
       </ol>
 
       <!-- Content Row -->
@@ -38,27 +54,12 @@
         <!-- Map Column -->
         <div class="col-lg-8 mb-4">
           <!-- Embedded Google Map -->
-          <iframe width="100%" height="400px" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="http://maps.google.com/maps?hl=en&amp;ie=UTF8&amp;ll=37.0625,-95.677068&amp;spn=56.506174,79.013672&amp;t=m&amp;z=4&amp;output=embed"></iframe>
+          <?php echo $description;?>
         </div>
         <!-- Contact Details Column -->
         <div class="col-lg-4 mb-4">
           <h3>Contact Details</h3>
-          <p>
-            Road #6 Banateay Chas, Slakram
-            <br>Krong Siem Reap, KH 17271
-            <br>
-          </p>
-          <p>
-            <abbr title="Phone">P</abbr>: (855) 92-77-12-44
-          </p>
-          <p>
-            <abbr title="Email">E</abbr>:
-            <a href="mailto:sourng@rpitssr.edu.kh">sourng@rpitssr.edu.kh
-            </a>
-          </p>
-          <p>
-            <abbr title="Hours">H</abbr>: Monday - Friday: 9:00 AM to 5:00 PM
-          </p>
+          <?php echo $detail; ?>
         </div>
       </div>
       <!-- /.row -->
