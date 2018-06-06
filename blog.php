@@ -1,8 +1,10 @@
 <?php 
+$_SESSION['cart']=isset($_SESSION['cart']) ? $_SESSION['cart'] : array();
+
  include_once('./db/dbconf.php');
   include_once('./class/class.crud.php');
   $crud=new Crud($DB_con);
-
+extract($crud->getPages(4));
 ?>
 
 <!DOCTYPE html>

@@ -6,6 +6,8 @@
     <link href="css/modern-business.css" rel="stylesheet">
     <script src="js/script.js"></script>
 
+ <!-- <link rel="alternate" href="css/custom.css"> -->
+    <link rel="stylesheet" type="text/css" href="css/custom.css">
 
 <style>
   h4{

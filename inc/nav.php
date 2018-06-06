@@ -19,6 +19,9 @@
             <li class="nav-item">
               <a class="<?php if(basename($_SERVER['SCRIPT_NAME']) == 'blog.php'){echo 'nav-link active'; }else { echo 'nav-link'; } ?>" href="blog.php">Blog</a>
             </li>
+            <li class="nav-item">
+              <a class="<?php if(basename($_SERVER['SCRIPT_NAME']) == 'product.php'){echo 'nav-link active'; }else { echo 'nav-link'; } ?>" href="product.php">Products</a>
+            </li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownPortfolio" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 Courses
@@ -56,5 +59,27 @@
           
 		  </ul>
         </div>
+
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+ 
+                <!-- highlight if $title has 'Products' word. -->
+                <li <?php echo $title=="Products" ? "class='active'" : ""; ?>>
+                    <a href="product.php" class="dropdown-toggle">Products</a>
+                </li>
+ 
+                <li <?php echo $title=="Cart" ? "class='active'" : ""; ?> >
+                    <a href="cart.php">
+                        <?php
+                        // count products in cart
+                        $cart_count=count($_SESSION['cart']);
+                        ?>
+                        Cart <span class="badge" id="comparison-count"><?php echo $cart_count; ?></span>
+                    </a>
+                </li>
+            </ul>
+ 
+        </div><!--/.nav-collapse -->
+
       </div>
     </nav>

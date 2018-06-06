@@ -1,17 +1,126 @@
 <?php
-
+$_SESSION['cart']=isset($_SESSION['cart']) ? $_SESSION['cart'] : array();
 /**
  * Create class for Course
  */
  class Crud
  {
  	private $db;
+ 	private $conn;
+
+ 	private $table_name_pro="products";
+
+ 	private $table_name_img = "product_images";
+ 
+    // object properties
+    public $id;
+    public $product_id;
+    public $name;
+    public $timestamp;
 
 
  	function __construct($DB_con)
  	{
- 		$this->db=$DB_con; 		
+ 		$this->db=$DB_con; 
+ 		$this->conn=$DB_con;		
  	}
+
+// Work on Cart
+
+ 	// read the first product image related to a product
+function readFirst(){
+ 
+    // select query
+    $query = "SELECT id, product_id, name
+            FROM " . $this->table_name_pro . "
+            WHERE product_id = ?
+            ORDER BY name DESC
+            LIMIT 0, 1";
+ 
+    // prepare query statement
+    $stmt = $this->db->prepare( $query );
+ 
+    // sanitize
+    $this->id=htmlspecialchars(strip_tags($this->id));
+ 
+    // bind prodcut id variable
+    $stmt->bindParam(1, $this->product_id);
+ 
+    // execute query
+    $stmt->execute();
+ 
+    // return values
+    return $stmt;
+}
+
+
+// read all products
+function read($from_record_num, $records_per_page){
+ 
+    // select all products query
+    $query = "SELECT
+                id, name, description, price 
+            FROM
+                " . $this->table_name_pro . "
+            ORDER BY
+                created DESC
+            LIMIT
+                ?, ?";
+ 
+    // prepare query statement
+    $stmt = $this->conn->prepare( $query );
+ 
+    // bind limit clause variables
+    $stmt->bindParam(1, $from_record_num, PDO::PARAM_INT);
+    $stmt->bindParam(2, $records_per_page, PDO::PARAM_INT);
+ 
+    // execute query
+    $stmt->execute();
+ 
+    // return values
+    return $stmt;
+}
+ 
+// used for paging products
+public function count(){
+ 
+    // query to count all product records
+    $query = "SELECT count(*) FROM " . $this->table_name_pro;
+ 
+    // prepare query statement
+    $stmt = $this->conn->prepare( $query );
+ 
+    // execute query
+    $stmt->execute();
+ 
+    // get row value
+    $rows = $stmt->fetch(PDO::FETCH_NUM);
+ 
+    // return count
+    return $rows[0];
+}
+
+
+// ================================== End Work on Cart ==================
+
+
+
+ 	// Function for get data by sql
+ 	public function get_by_sql($SQL_Query){
+
+ 		$stmt=$this->db->prepare($SQL_Query);
+ 		$stmt->execute();
+ 		// return($stmt);	 
+
+ 		if($stmt->rowCount()>0){ 		
+	 		// $stmt->fetch(PDO::FETCH_ASSOC);
+	 		return($stmt);	 		
+ 		}else{
+ 			echo "Nothing";
+ 		}
+
+ 	} // End Function get all data by sql
+
 
  	// Get Detail page
  	public function getBlogDetail($id)

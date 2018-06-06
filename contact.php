@@ -44,7 +44,7 @@ extract($crud->getPages(5));
 
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
-          <a href="index.html">Home</a>
+          <a href="index.php">Home</a>
         </li>
         <li class="breadcrumb-item active"><?php echo $title;?></li>
       </ol>
@@ -106,8 +106,7 @@ extract($crud->getPages(5));
 
     </div>
     <!-- /.container -->
-
-    <<!-- Footer -->
+  <!-- Footer -->
    <?php include_once('inc/footer.php'); ?>
 
 <!-- Bootstrap core JavaScript -->

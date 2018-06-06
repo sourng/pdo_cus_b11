@@ -1,4 +1,6 @@
 <?php 
+$_SESSION['cart']=isset($_SESSION['cart']) ? $_SESSION['cart'] : array();
+
   include_once('./db/dbconf.php');
   include_once('./class/class.slide.php');
   include_once('./class/class.course.php');
